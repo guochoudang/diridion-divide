@@ -641,7 +641,31 @@ function questionsCol(db){return db.collection('rooms/'+state.roomCode+'/questio
 let unsubs = [];
 function clearSubs(){unsubs.forEach(u=>{try{u();}catch(e){}}); unsubs=[];}
 
-async function enterRoom(code, creating){
+/* Set up once a room is joined; re-reads everything from the database. */
+let resyncRoom = null;
+let lastResyncAt = 0;
+function resyncIfStale(minGapMs){
+  if(!resyncRoom || !state.roomCode) return;
+  const now = Date.now();
+  if(now - lastResyncAt < (minGapMs||1500)) return;
+  lastResyncAt = now;
+  resyncRoom();
+}
+document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) resyncIfStale(); });
+window.addEventListener('focus', ()=>resyncIfStale());
+window.addEventListener('pageshow', ()=>resyncIfStale());
+window.addEventListener('online', ()=>resyncIfStale(0));
+/* Belt and braces: a slow check while the game is up, so a listener that has
+   quietly died can never strand someone for more than half a minute. */
+setInterval(()=>{ if(!document.hidden) resyncIfStale(25000); }, 10000);
+
+async function enterRoom(code, creating, silent){
+  /* Drop any listeners from a previous room. Without this, entering a second
+     room leaves the first room's listeners running, and they keep writing that
+     room's state — including its "not started" flag — over the top of the new
+     one, which bounces the player back to the lobby. */
+  clearSubs();
+  resyncRoom = null;
   state.roomCode = code;
   const db = await getDb();
   document.getElementById('soloNotice').hidden = !!db;
@@ -659,11 +683,17 @@ async function enterRoom(code, creating){
     } else {
       const snap = await roomDoc(db).get();
       if(!snap.exists){
-        await roomDoc(db).set({
-          centerLat: state.center.lat, centerLon: state.center.lon, radiusMi: state.radiusMi,
-          started:false, hostId: state.me.id, roundNumber:1, createdAt: Date.now(), directionalUsedRound:0
-        });
-        state.me.isHost = true;
+        /* Typing a code for a room that does not exist used to silently create
+           it and make you the host. When a group is split across two links, or
+           somebody mistypes, that quietly produces a second room with the same
+           code — everyone in it waits for a host who is somewhere else. Say so
+           instead. */
+        state.roomCode = null;
+        try{ localStorage.removeItem('jld_room'); }catch(e){}
+        // Silent on an automatic rejoin — the saved room has simply gone.
+        if(!silent) alert('There is no room "'+code+'".\n\nCheck the code with whoever set the game up — and make sure everyone opened the same link. If you meant to start a new game, use "Create a new room instead".');
+        goPhase('join');
+        return;
       }
       const existing = await playersCol(db).doc(state.me.id).get();
       await playersCol(db).doc(state.me.id).set({
@@ -673,9 +703,10 @@ async function enterRoom(code, creating){
       if(existing.exists && existing.data().isHost) state.me.isHost = true;
     }
 
-    unsubs.push(roomDoc(db).onSnapshot(snap=>{
-      if(!snap.exists) return;
-      const d = snap.data();
+    /* These four are shared by the live listeners and by the catch-up read
+       below, so a resumed phone applies updates by exactly the same path. */
+    const applyRoom = d => {
+      if(!d) return;
       const centerChanged = state.center.lat!==d.centerLat || state.center.lon!==d.centerLon || state.radiusMi!==d.radiusMi;
       state.center = {lat:d.centerLat, lon:d.centerLon};
       state.radiusMi = d.radiusMi;
@@ -684,9 +715,8 @@ async function enterRoom(code, creating){
       if(centerChanged){ rebuildGeography(); renderAll(); }
       recomputeElimination();
       onRoomUpdate();
-    }));
-
-    unsubs.push(playersCol(db).onSnapshot(snap=>{
+    };
+    const applyPlayers = snap => {
       const p = {};
       snap.docs.forEach(d=>{p[d.id]=d.data();});
       state.players = p;
@@ -697,21 +727,43 @@ async function enterRoom(code, creating){
       renderLobbyPlayers();
       renderPanel();
       updateRoleBadge();
-    }));
-
-    unsubs.push(locsCol(db).onSnapshot(snap=>{
+    };
+    const applyLocations = snap => {
       const l = {};
       snap.docs.forEach(d=>{l[d.id]=d.data();});
       state.locations = l;
       renderPlayers();
-    }));
-
-    unsubs.push(questionsCol(db).onSnapshot(snap=>{
+    };
+    const applyQuestions = snap => {
       state.questions = snap.docs.map(d=>({id:d.id, ...d.data()})).sort((a,b)=>a.askedAt-b.askedAt);
       recomputeElimination();
       renderQuestionsOverlay();
       renderPanel();
-    }));
+    };
+
+    unsubs.push(roomDoc(db).onSnapshot(snap=>{ if(snap.exists) applyRoom(snap.data()); }));
+    unsubs.push(playersCol(db).onSnapshot(applyPlayers));
+    unsubs.push(locsCol(db).onSnapshot(applyLocations));
+    unsubs.push(questionsCol(db).onSnapshot(applyQuestions));
+
+    /* A phone suspends this page the moment it is locked or the player switches
+       apps, and while suspended the live listeners receive nothing. Waiting in
+       the lobby is exactly when someone pockets their phone, so the host presses
+       Start, the update never arrives, and that player is left staring at
+       "waiting for the host" until they reload.
+
+       So on every return to the foreground, read the room straight from the
+       database instead of trusting the listener to have kept up. */
+    resyncRoom = async () => {
+      try{
+        const [rs, ps, ls, qs] = await Promise.all([
+          roomDoc(db).get(), playersCol(db).get(), locsCol(db).get(), questionsCol(db).get()
+        ]);
+        if(rs.exists) applyRoom(rs.data());
+        applyPlayers(ps); applyLocations(ls); applyQuestions(qs);
+        return true;
+      }catch(e){ return false; }  // offline; the listeners will catch up
+    };
   } else {
     state.me.isHost = true;
     state.players = {[state.me.id]: {name:state.me.name, role:state.me.role, isHost:true, joinedAt:Date.now()}};
@@ -2127,7 +2179,7 @@ if(savedRoom && state.me.name){
   document.getElementById('reconnectOverlay').hidden = false;
   document.getElementById('reconnectLeaveBtn').onclick = leaveRoom;
   document.getElementById('roomInput').value = savedRoom;
-  enterRoom(savedRoom, false);
+  enterRoom(savedRoom, false, true);
 } else {
   goPhase('join');
 }
