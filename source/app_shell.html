@@ -1,0 +1,2134 @@
+<meta charset="utf-8">
+<!-- Required when this file is hosted anywhere other than as a Claude artifact:
+     without it phones lay the page out at 980px wide and shrink it to fit.
+     viewport-fit=cover lets the safe-area insets below resolve on notched phones. -->
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Diridon Divide">
+<title>The Diridon Divide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+:root{
+  --bg:#e7ece4; --surface:#f5f7f1; --surface-2:#dce3d5; --surface-3:#cbd5c1;
+  --ink:#1f2a24; --ink-soft:#4a564c; --ink-faint:#7c8977;
+  --line:#b9c4b0; --line-strong:#9aa88f;
+  --accent:#c4622d; --accent-ink:#fff8f2;
+  --water:#6c93a6; --water-fill:#c7d9e0;
+  --hider:#b23a48; --seeker:#3e7c59;
+  --warn:#ad7f16; --good:#3e7c59; --bad:#b23a48;
+  --elim:rgba(31,42,36,0.5); --elim-line:rgba(31,42,36,0.75);
+  --shadow:0 2px 10px rgba(31,42,36,0.18), 0 1px 2px rgba(31,42,36,0.12);
+  --radius-sm:6px; --radius-md:10px; --radius-lg:16px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#111710; --surface:#1a221b; --surface-2:#232d22; --surface-3:#2e3a2b;
+    --ink:#e6ebe0; --ink-soft:#aab6a2; --ink-faint:#7c8977;
+    --line:#33402e; --line-strong:#445238;
+    --accent:#e0854e; --accent-ink:#1a1006;
+    --water:#4c7690; --water-fill:#20313b;
+    --hider:#e0616d; --seeker:#6fbe93;
+    --warn:#d9b054; --good:#6fbe93; --bad:#e0616d;
+    --elim:rgba(0,0,0,0.55); --elim-line:rgba(255,255,255,0.8);
+    --shadow:0 2px 14px rgba(0,0,0,0.45);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#111710; --surface:#1a221b; --surface-2:#232d22; --surface-3:#2e3a2b;
+  --ink:#e6ebe0; --ink-soft:#aab6a2; --ink-faint:#7c8977;
+  --line:#33402e; --line-strong:#445238;
+  --accent:#e0854e; --accent-ink:#1a1006;
+  --water:#4c7690; --water-fill:#20313b;
+  --hider:#e0616d; --seeker:#6fbe93;
+  --warn:#d9b054; --good:#6fbe93; --bad:#e0616d;
+  --elim:rgba(0,0,0,0.55); --elim-line:rgba(255,255,255,0.8);
+  --shadow:0 2px 14px rgba(0,0,0,0.45);
+}
+*{box-sizing:border-box;}
+html,body{height:100%;}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:"IBM Plex Sans",system-ui,-apple-system,sans-serif;
+  overflow:hidden; -webkit-tap-highlight-color:transparent;
+}
+.mono{font-family:"IBM Plex Mono",ui-monospace,monospace;}
+button{font-family:inherit; cursor:pointer;}
+input,select{font-family:inherit;}
+/* Height uses dvh so the layout shrinks to the *visible* area when a phone
+   browser's bottom toolbar is showing. Plain vh measures the tall viewport and
+   pushes the bottom of the panel underneath that toolbar. */
+#app{position:fixed; left:0; right:0; top:0; height:100vh; height:100dvh; display:flex; flex-direction:column;}
+
+/* ---------- Topbar ---------- */
+#topbar{
+  display:flex; align-items:center; gap:10px; padding:10px 12px;
+  background:var(--surface); border-bottom:1px solid var(--line); z-index:30;
+  flex-shrink:0;
+}
+.brand{font-weight:700; font-size:15px; letter-spacing:.2px; white-space:nowrap;}
+.brand small{display:block; font-weight:500; font-size:10px; color:var(--ink-faint); letter-spacing:.6px; text-transform:uppercase;}
+.pill{
+  display:inline-flex; align-items:center; gap:5px; padding:5px 10px; border-radius:999px;
+  font-size:12px; font-weight:600; border:1px solid var(--line); background:var(--surface-2); color:var(--ink-soft);
+}
+.pill.role-hider{background:color-mix(in srgb, var(--hider) 18%, var(--surface-2)); color:var(--hider); border-color:color-mix(in srgb, var(--hider) 40%, var(--line));}
+.pill.role-seeker{background:color-mix(in srgb, var(--seeker) 18%, var(--surface-2)); color:var(--seeker); border-color:color-mix(in srgb, var(--seeker) 40%, var(--line));}
+#topbar .spacer{flex:1;}
+.iconbtn{
+  width:36px; height:36px; border-radius:var(--radius-md); border:1px solid var(--line);
+  background:var(--surface-2); color:var(--ink); display:flex; align-items:center; justify-content:center;
+  font-size:16px;
+}
+.iconbtn:active{background:var(--surface-3);}
+
+/* ---------- Map area ---------- */
+#mapWrap{position:relative; flex:1; min-height:0; overflow:hidden; background:var(--bg);}
+#mapSvg{position:absolute; inset:0; width:100%; height:100%; touch-action:none;}
+#elimCanvas{position:absolute; inset:0; width:100%; height:100%; pointer-events:none;}
+.map-label{font-family:"IBM Plex Sans",sans-serif; fill:var(--ink-soft); font-weight:600; paint-order:stroke; stroke:var(--bg); stroke-width:3px;}
+.station-dot{fill:#f5f0e6; stroke:var(--ink); stroke-width:1.75;}
+.poi-dot{stroke:var(--surface); stroke-width:1.2;}
+.you-marker circle.pulse{opacity:.35;}
+
+#mapControls{position:absolute; right:10px; bottom:14px; display:flex; flex-direction:column; gap:10px; z-index:20; align-items:flex-end;}
+#mapControls .iconbtn{background:var(--surface); box-shadow:var(--shadow); width:52px; height:52px; font-size:24px;}
+/* Labelled rather than bare glyphs: on a phone there is no tooltip, so an
+   unlabelled ◎ gives no clue that it is the way back out of a deep zoom. */
+.mapbtn{
+  display:flex; align-items:center; gap:8px; height:52px; padding:0 16px;
+  border-radius:26px; border:1px solid var(--line); background:var(--surface);
+  color:var(--ink); box-shadow:var(--shadow); font-weight:700; font-size:15px;
+  white-space:nowrap;
+}
+.mapbtn .mi{font-size:20px; line-height:1;}
+.mapbtn:active{background:var(--surface-2);}
+/* Lights up once the view has been moved or zoomed away from the default, so
+   the way back is obvious exactly when it is needed. */
+.mapbtn.nudge{background:var(--accent); border-color:var(--accent); color:var(--accent-ink);}
+#locControls{position:absolute; left:10px; bottom:14px; z-index:20; display:flex; flex-direction:column; gap:6px; max-width:calc(100% - 168px);}
+.chip{
+  background:var(--surface); border:1px solid var(--line); box-shadow:var(--shadow); border-radius:999px;
+  padding:12px 18px; font-size:16px; font-weight:600; color:var(--ink-soft); display:flex; align-items:center; gap:8px;
+  min-height:46px;
+}
+.chip.active{color:var(--accent-ink); background:var(--accent); border-color:var(--accent);}
+
+/* Sized for thumbs, not cursors: each toggle row is a ~44px tap target, which
+   is the smallest a phone control can be before it starts getting missed. */
+/* Sized for thumbs, not cursors: each toggle row is a ~42px tap target, which
+   is about the smallest a phone control can be before it starts getting missed.
+   Kept as tight vertically as that allows, since an open legend sits over the
+   map. Collapsed by default. */
+#legend{position:absolute; left:10px; top:10px; z-index:20; background:var(--surface); border:1px solid var(--line); border-radius:var(--radius-md); box-shadow:var(--shadow); padding:8px 12px; font-size:16px; color:var(--ink-soft); max-width:244px; max-height:calc(100% - 20px); overflow-y:auto;}
+#legend .row{display:flex; align-items:center; gap:10px; margin:2px 0; line-height:1.25;}
+#legend .sw{width:17px; height:17px; border-radius:50%; flex-shrink:0; box-shadow:0 0 0 2px var(--line) inset;}
+#legend .row.toggle{cursor:pointer; padding:8px 6px; margin:0 -6px; border-radius:8px; user-select:none; min-height:42px;}
+#legend .row.toggle:active{background:var(--surface-2);}
+#legend .row.toggle.off{opacity:.5;}
+#legend .row.toggle.off .sw{background:transparent !important; box-shadow:0 0 0 2px var(--ink-faint) inset;}
+#legend .row.toggle .state{margin-left:auto; font-size:12.5px; font-weight:700; letter-spacing:.5px; color:var(--ink-faint); padding-left:8px;}
+#legend #legendToggle{font-size:17.5px; min-height:36px;}
+#legend .note{font-size:12.5px; opacity:.7; line-height:1.35; margin-top:5px;}
+
+/* ---------- Bottom sheet / panel ---------- */
+#panel{
+  background:var(--surface); border-top:1px solid var(--line); z-index:30; flex-shrink:0;
+  display:flex; flex-direction:column; max-height:52vh; max-height:52dvh; transition:max-height .2s ease;
+  padding-bottom:env(safe-area-inset-bottom, 0px);
+}
+#panel.collapsed{max-height:46px; max-height:calc(46px + env(safe-area-inset-bottom, 0px));}
+#panelHandle{display:flex; align-items:center; padding:8px 12px; gap:10px; cursor:pointer; flex-shrink:0;}
+#panelHandle .grip{width:36px; height:4px; border-radius:99px; background:var(--line-strong); margin:0 auto;}
+#tabs{display:flex; gap:4px; padding:0 10px 8px; flex-shrink:0; overflow-x:auto;}
+.tab{
+  padding:7px 12px; border-radius:999px; font-size:12.5px; font-weight:600; color:var(--ink-soft);
+  background:var(--surface-2); border:1px solid var(--line); white-space:nowrap;
+}
+.tab.active{background:var(--ink); color:var(--surface); border-color:var(--ink);}
+/* Generous bottom padding guarantees the last control in a tab (the End game
+   button) can always be scrolled clear of the phone's home indicator. */
+#panelBody{overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain; padding:0 14px 28px; flex:1;}
+
+.section-title{font-size:11px; font-weight:700; letter-spacing:.6px; text-transform:uppercase; color:var(--ink-faint); margin:14px 0 6px;}
+.section-title:first-child{margin-top:4px;}
+
+/* Player list */
+.player-row{display:flex; align-items:center; gap:8px; padding:8px 0; border-bottom:1px solid var(--line);}
+.player-row:last-child{border-bottom:none;}
+.dot{width:10px; height:10px; border-radius:50%; flex-shrink:0;}
+.player-row .name{font-weight:600; font-size:13.5px;}
+.player-row .sub{font-size:11px; color:var(--ink-faint);}
+.player-row .spacer{flex:1;}
+.role-btn-group{display:flex; gap:6px;}
+.role-btn{padding:5px 10px; border-radius:8px; border:1px solid var(--line); background:var(--surface-2); font-size:11.5px; font-weight:600; color:var(--ink-soft);}
+.role-btn.on.hider{background:var(--hider); color:#fff8f2; border-color:var(--hider);}
+.role-btn.on.seeker{background:var(--seeker); color:#f3fbf6; border-color:var(--seeker);}
+
+/* Question bank cards */
+.qcard{
+  border:1px solid var(--line); background:var(--surface-2); border-radius:var(--radius-md);
+  padding:10px 12px; margin-bottom:8px;
+}
+.qcard.used{opacity:.7;}
+.qcard.previewing{border-color:var(--accent); box-shadow:0 0 0 2px color-mix(in srgb, var(--accent) 30%, transparent);}
+.qcard .qtitle{font-weight:600; font-size:13.5px; display:flex; align-items:center; gap:6px;}
+.qcard .qdesc{font-size:11.5px; color:var(--ink-faint); margin-top:2px;}
+.qcard .qrow{display:flex; align-items:center; gap:8px; margin-top:8px; flex-wrap:wrap;}
+.badge{font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.4px; padding:2px 7px; border-radius:999px;}
+.badge.available{background:color-mix(in srgb, var(--seeker) 20%, var(--surface)); color:var(--seeker);}
+.badge.used-yes{background:color-mix(in srgb, var(--good) 20%, var(--surface)); color:var(--good);}
+.badge.used-no{background:color-mix(in srgb, var(--bad) 20%, var(--surface)); color:var(--bad);}
+.badge.pending{background:color-mix(in srgb, var(--warn) 25%, var(--surface)); color:var(--warn);}
+
+.btn{
+  border:1px solid var(--line); background:var(--surface); color:var(--ink); font-weight:600; font-size:12.5px;
+  padding:7px 12px; border-radius:8px;
+}
+.btn.primary{background:var(--accent); color:var(--accent-ink); border-color:var(--accent);}
+.btn.yes{background:var(--good); color:#fff; border-color:var(--good);}
+.btn.no{background:var(--bad); color:#fff; border-color:var(--bad);}
+.btn.veto{background:var(--surface-2); color:var(--ink-soft);}
+.btn:disabled{opacity:.4;}
+.btn.small{padding:5px 9px; font-size:11.5px;}
+.numfield{width:64px; padding:5px 7px; border-radius:6px; border:1px solid var(--line); background:var(--surface); color:var(--ink); font-size:12.5px;}
+select.selfield{padding:5px 7px; border-radius:6px; border:1px solid var(--line); background:var(--surface); color:var(--ink); font-size:12.5px;}
+
+/* Log entries */
+.logentry{border-bottom:1px solid var(--line); padding:9px 0;}
+.logentry:last-child{border-bottom:none;}
+.logentry .lqtitle{font-weight:600; font-size:13px;}
+.logentry .lmeta{font-size:11px; color:var(--ink-faint); margin-top:2px;}
+.logentry .lanswer{font-size:12px; font-weight:700; margin-top:4px;}
+.lanswer.yes, .lanswer.a{color:var(--good);}
+.lanswer.no, .lanswer.b{color:var(--bad);}
+.lanswer.veto{color:var(--ink-faint);}
+.lanswer.wait{color:var(--warn);}
+
+/* ---------- Overlays / Modals ---------- */
+.overlay{
+  position:fixed; inset:0; z-index:100; background:color-mix(in srgb, var(--ink) 45%, transparent);
+  display:flex; align-items:center; justify-content:center; padding:20px;
+}
+.overlay[hidden]{display:none;}
+.modal{
+  background:var(--surface); border-radius:var(--radius-lg); box-shadow:var(--shadow);
+  padding:24px 22px; width:100%; max-width:380px; max-height:88vh; overflow-y:auto;
+}
+.modal h1{font-size:20px; margin:0 0 4px; letter-spacing:-.2px;}
+.modal .lede{font-size:13px; color:var(--ink-soft); margin:0 0 18px; line-height:1.5;}
+.field{margin-bottom:14px;}
+.field label{display:block; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:var(--ink-faint); margin-bottom:5px;}
+.field input, .field select{
+  width:100%; padding:10px 11px; border-radius:8px; border:1px solid var(--line); background:var(--surface-2);
+  color:var(--ink); font-size:14px;
+}
+.rolepick{display:flex; gap:8px; margin-top:6px;}
+.rolepick button{flex:1; padding:12px 8px; border-radius:10px; border:1.5px solid var(--line); background:var(--surface-2); font-weight:700; font-size:13px;}
+.rolepick button.sel.hider{border-color:var(--hider); background:color-mix(in srgb, var(--hider) 16%, var(--surface-2)); color:var(--hider);}
+.rolepick button.sel.seeker{border-color:var(--seeker); background:color-mix(in srgb, var(--seeker) 16%, var(--surface-2)); color:var(--seeker);}
+.full{width:100%; margin-top:6px; padding:12px; font-size:14px;}
+.hint{font-size:11.5px; color:var(--ink-faint); margin-top:8px; line-height:1.5;}
+.linklike{background:none; border:none; color:var(--accent); font-weight:600; font-size:12.5px; padding:0; text-decoration:underline;}
+</style>
+
+<div id="app">
+  <div id="topbar">
+    <div class="brand">The Diridon Divide<small id="roomCodeLbl">—</small></div>
+    <div class="spacer"></div>
+    <span class="pill" id="roleBadge" hidden></span>
+    <span class="pill" id="roundBadge" hidden></span>
+    <button class="iconbtn" id="menuBtn" title="Menu">☰</button>
+  </div>
+
+  <div id="mapWrap">
+    <svg id="mapSvg" xmlns="http://www.w3.org/2000/svg"></svg>
+    <canvas id="elimCanvas"></canvas>
+    <div id="legend"></div>
+    <div id="mapControls">
+      <button class="iconbtn" id="zoomIn">+</button>
+      <button class="iconbtn" id="zoomOut">–</button>
+      <button class="mapbtn" id="recenterBtn"><span class="mi">◎</span><span class="ml">Whole map</span></button>
+      <button class="mapbtn" id="myLocBtn"><span class="mi">➤</span><span class="ml">Find me</span></button>
+    </div>
+    <div id="locControls">
+      <div class="chip active" id="locModeChip">📍 Tap map to set your spot</div>
+    </div>
+  </div>
+
+  <div id="panel">
+    <div id="panelHandle"><div class="grip"></div></div>
+    <div id="tabs">
+      <button class="tab active" data-tab="questions">Questions</button>
+      <button class="tab" data-tab="log">Log</button>
+      <button class="tab" data-tab="players">Players</button>
+      <button class="tab" data-tab="setup">Setup</button>
+    </div>
+    <div id="panelBody"></div>
+  </div>
+</div>
+
+<!-- Join / Create -->
+<div class="overlay" id="joinOverlay">
+  <div class="modal">
+    <h1>The Diridon Divide</h1>
+    <p class="lede">A live map for playing Jet Lag: The Game around San Jose — the computer draws the exact boundaries so no one has to eyeball a radius circle.</p>
+    <div class="field">
+      <label>Your name</label>
+      <input id="nameInput" placeholder="e.g. Max" maxlength="24">
+    </div>
+    <div class="field">
+      <label>Room code</label>
+      <input id="roomInput" placeholder="e.g. FOXY" maxlength="8" style="text-transform:uppercase">
+    </div>
+    <button class="btn primary full" id="joinBtn">Join room</button>
+    <button class="btn full" id="createBtn" style="margin-top:8px;">Create a new room instead</button>
+    <p class="hint">Everyone playing together opens this same link and enters the same room code. Whoever creates the room is the host and sets the map's center point and radius.</p>
+  </div>
+</div>
+
+<!-- Reconnecting (auto-rejoin on reload) -->
+<div class="overlay" id="reconnectOverlay" hidden>
+  <div class="modal" style="text-align:center;">
+    <h1>Welcome back</h1>
+    <p class="lede">Rejoining room <strong id="reconnectCode" class="mono"></strong>…</p>
+    <button class="linklike" id="reconnectLeaveBtn">Not your room? Leave it</button>
+  </div>
+</div>
+
+<!-- Lobby (role select) -->
+<div class="overlay" id="lobbyOverlay" hidden>
+  <div class="modal">
+    <h1>Lobby</h1>
+    <p class="lede">Room <strong id="lobbyCode" class="mono"></strong> — pick your side.</p>
+    <p class="hint" id="soloNotice" hidden style="color:var(--warn); margin-top:-10px; margin-bottom:14px;">Solo mode: this copy has no shared connection, so other players can't join this room. Everything below still works for one player.</p>
+    <div class="rolepick">
+      <button id="pickHider">🦊 Hider</button>
+      <button id="pickSeeker">🔎 Seeker</button>
+    </div>
+    <div class="section-title">Players</div>
+    <div id="lobbyPlayers"></div>
+    <div id="hostSettings" hidden>
+      <div class="section-title">Play area (host only)</div>
+      <div class="field" style="margin-bottom:8px;">
+        <label>Center latitude, longitude</label>
+        <div style="display:flex; gap:6px;">
+          <input class="numfield" style="width:auto;flex:1" id="lobbySetLat">
+          <input class="numfield" style="width:auto;flex:1" id="lobbySetLon">
+        </div>
+      </div>
+      <div class="field" style="margin-bottom:8px;">
+        <label>Radius (miles)</label>
+        <input class="numfield" style="width:auto" id="lobbySetRadius">
+      </div>
+      <button class="btn" id="lobbyApplySetup">Apply</button>
+    </div>
+    <button class="btn primary full" id="startGameBtn" hidden style="margin-top:14px;">Start game</button>
+    <p class="hint" id="lobbyWaitHint">Waiting for the host to start the game…</p>
+  </div>
+</div>
+
+<script>
+/* ============================== CONSTANTS ============================== */
+const DEFAULT_CENTER = {lat:37.3297, lon:-121.9032}; // San Jose Diridon Station
+const DEFAULT_RADIUS_MI = 20;
+const R_EARTH = 6371000;
+
+/*GEO_DATA_PLACEHOLDER*/
+
+/*VTA_TOPOLOGY_PLACEHOLDER*/
+
+// Decorative schematic basemap geometry (illustrative only — not used for any game math)
+const ROADS = [
+  {name:'US-101', pts:[[37.150,-121.660],[37.220,-121.770],[37.300,-121.850],[37.330,-121.900],[37.368,-121.928],[37.395,-122.077],[37.442,-122.143],[37.485,-122.203],[37.520,-122.245]]},
+  {name:'I-880', pts:[[37.330,-121.900],[37.360,-121.905],[37.409,-121.892],[37.433,-121.900],[37.4985,-121.9740],[37.5485,-121.9886],[37.5934,-122.0438],[37.650,-122.075]]},
+  {name:'I-280', pts:[[37.245,-121.770],[37.260,-121.830],[37.279,-121.900],[37.300,-121.960],[37.3230,-122.0322],[37.3852,-122.1141],[37.4200,-122.1450],[37.470,-122.200],[37.510,-122.245]]},
+  {name:'CA-87', pts:[[37.225,-121.865],[37.276,-121.888],[37.3285,-121.9036],[37.369,-121.915]]},
+  {name:'CA-85', pts:[[37.3861,-122.0839],[37.3230,-122.0322],[37.2872,-121.9500],[37.245,-121.900],[37.170,-121.800]]},
+  {name:'CA-17', pts:[[37.2872,-121.9500],[37.2358,-121.9624],[37.190,-121.990]]},
+  {name:'CA-237', pts:[[37.3688,-122.0363],[37.400,-121.973],[37.4249,-121.9773],[37.433,-121.900]]},
+  {name:'I-680', pts:[[37.409,-121.892],[37.433,-121.900],[37.470,-121.910],[37.5485,-121.9886]]},
+];
+const HILLS = [
+  {name:'Santa Cruz Mountains', cx:37.230,cy:-122.070, rx:0.11, ry:0.22, rot:35},
+  {name:'Diablo Range', cx:37.280,cy:-121.720, rx:0.10, ry:0.28, rot:-25},
+];
+const CITY_LABELS = [
+  ['San Jose',37.3382,-121.8863,1],['Santa Clara',37.3541,-121.9552,0],['Sunnyvale',37.3688,-122.0363,0],
+  ['Mountain View',37.3861,-122.0839,0],['Palo Alto',37.4419,-122.1430,0],['Cupertino',37.3230,-122.0322,0],
+  ['Campbell',37.2872,-121.9500,0],['Los Gatos',37.2358,-121.9624,0],['Saratoga',37.2638,-122.0230,0],
+  ['Milpitas',37.4323,-121.8996,0],['Fremont',37.5485,-121.9886,0],['Newark',37.5297,-122.0402,0],
+  ['Union City',37.5934,-122.0438,0],['Redwood City',37.4852,-122.2364,0],['Menlo Park',37.4530,-122.1817,0],
+  ['Los Altos',37.3852,-122.1141,0],['Morgan Hill',37.1305,-121.6544,0],['Alviso',37.4249,-121.9773,0],
+  ['Almaden Valley',37.2085,-121.8496,0],['Willow Glen',37.3080,-121.8950,0],['Berryessa',37.3684,-121.8747,0],
+];
+
+const QUESTION_BANK = [
+  {key:'match_mall', group:'Matching', label:'Nearest shopping mall', kind:'match', cat:'MALLS'},
+  {key:'match_park', group:'Matching', label:'Nearest public park', kind:'match', cat:'PARKS'},
+  {key:'match_theatre', group:'Matching', label:'Nearest movie theatre', kind:'match', cat:'THEATRES'},
+  {key:'match_hospital', group:'Matching', label:'Nearest hospital', kind:'match', cat:'HOSPITALS'},
+  {key:'match_library', group:'Matching', label:'Nearest library', kind:'match', cat:'LIBRARIES'},
+  {key:'water', group:'Matching', label:'Closer/farther from water', kind:'water'},
+  {key:'radar_100m', group:'Radar', label:'Radar — 100 meters', kind:'radar', radiusM:100},
+  {key:'radar_500m', group:'Radar', label:'Radar — 500 meters', kind:'radar', radiusM:500},
+  {key:'radar_1000m', group:'Radar', label:'Radar — 1000 meters', kind:'radar', radiusM:1000},
+  {key:'radar_05mi', group:'Radar', label:'Radar — 0.5 miles', kind:'radar', radiusM:804.7},
+  {key:'radar_1mi', group:'Radar', label:'Radar — 1 mile', kind:'radar', radiusM:1609.3},
+  {key:'radar_2mi', group:'Radar', label:'Radar — 2 miles', kind:'radar', radiusM:3218.7},
+  {key:'radar_3mi', group:'Radar', label:'Radar — 3 miles', kind:'radar', radiusM:4828.0},
+  {key:'radar_5mi', group:'Radar', label:'Radar — 5 miles', kind:'radar', radiusM:8046.7},
+  {key:'radar_custom', group:'Radar', label:'Custom radar', kind:'radar', custom:true},
+  {key:'therm_500ft', group:'Thermometer', label:'Thermometer — 500 feet', kind:'therm', distM:152.4},
+  {key:'therm_05mi', group:'Thermometer', label:'Thermometer — 0.5 miles', kind:'therm', distM:804.7},
+  {key:'therm_1mi', group:'Thermometer', label:'Thermometer — 1 mile', kind:'therm', distM:1609.3},
+  {key:'powerup_vta', group:'Powerups', label:'Within N stops of a station', kind:'vta', once:'game', defaultStation:'Race', defaultStops:5},
+  {key:'powerup_dir', group:'Powerups', label:'Directional (N/S or E/W)', kind:'dir', once:'round'},
+];
+
+/* ============================== UTIL ============================== */
+function haversine(lat1,lon1,lat2,lon2){
+  const toRad = d=>d*Math.PI/180;
+  const dLat = toRad(lat2-lat1), dLon = toRad(lon2-lon1);
+  const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
+  return 2*R_EARTH*Math.asin(Math.sqrt(a));
+}
+function milesToM(mi){return mi*1609.344;}
+function feetToM(ft){return ft*0.3048;}
+function fmtDist(m){
+  if(m < 300) return Math.round(m/0.3048) + ' ft';
+  const mi = m/1609.344;
+  return (mi<10 ? mi.toFixed(2) : mi.toFixed(1)) + ' mi';
+}
+function uid(){return 'p'+Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4);}
+function genRoomCode(){const A='BCDFGHJKLMNPQRSTVWXYZ',V='AEIOU'; let s=''; for(let i=0;i<4;i++) s+= i%2?V[Math.random()*5|0]:A[Math.random()*21|0]; return s;}
+function localGet(k,fallback){try{const v=localStorage.getItem(k); return v===null?fallback:v;}catch(e){return fallback;}}
+function localSet(k,v){try{localStorage.setItem(k,v);}catch(e){}}
+
+/* ============================== PROJECTION ============================== */
+// Local tangent-plane projection in meters, origin = current game center. x=east+, y=north+.
+let ORIGIN = {...DEFAULT_CENTER};
+function toWorld(lat,lon){
+  const latRad = ORIGIN.lat*Math.PI/180;
+  const x = (lon-ORIGIN.lon)*Math.PI/180*R_EARTH*Math.cos(latRad);
+  const y = (lat-ORIGIN.lat)*Math.PI/180*R_EARTH;
+  return {x,y};
+}
+function worldDist(w1,w2){const dx=w1.x-w2.x, dy=w1.y-w2.y; return Math.sqrt(dx*dx+dy*dy);}
+
+function projectAll(arr){
+  return arr.map(o=>{const w=toWorld(o.a!==undefined?o.a:o.lat, o.o!==undefined?o.o:o.lon); return {...o, wx:w.x, wy:w.y};});
+}
+function projectRivers(arr){
+  return arr.map(r => ({n:r.n, wpts: r.pts.map(([lat,lon])=>toWorld(lat,lon))}));
+}
+let PROJ = {}; // recomputed when ORIGIN changes
+function reprojectAll(){
+  PROJ.VTA = projectAll(GEO_VTA);
+  PROJ.MALLS = projectAll(GEO_MALLS);
+  PROJ.PARKS = projectAll(GEO_PARKS);
+  PROJ.THEATRES = projectAll(GEO_THEATRES);
+  PROJ.HOSPITALS = projectAll(GEO_HOSPITALS);
+  PROJ.LIBRARIES = projectAll(GEO_LIBRARIES);
+  PROJ.WATER = projectAll(GEO_WATER);
+  PROJ.RIVERS = projectRivers(GEO_RIVERS);
+  PROJ.MINOR_WATER = projectRivers(GEO_MINOR_WATER.map(m=>({n:'', pts:m.pts})));
+  waterSpatialHash = buildWaterSpatialHash();
+}
+
+function nearestOf(list, wx, wy){
+  let best=-1, bestD=Infinity;
+  for(let i=0;i<list.length;i++){
+    const dx=list[i].wx-wx, dy=list[i].wy-wy, d=dx*dx+dy*dy;
+    if(d<bestD){bestD=d; best=i;}
+  }
+  return {index:best, dist:Math.sqrt(bestD)};
+}
+
+function distPointToSegment(px,py, ax,ay, bx,by){
+  const dx=bx-ax, dy=by-ay;
+  const lenSq = dx*dx+dy*dy;
+  let t = lenSq>0 ? ((px-ax)*dx+(py-ay)*dy)/lenSq : 0;
+  t = Math.max(0, Math.min(1, t));
+  return Math.hypot(px-(ax+t*dx), py-(ay+t*dy));
+}
+function distPointToPolyline(px,py, pts){
+  let best = Infinity;
+  for(let i=0;i<pts.length-1;i++){
+    const d = distPointToSegment(px,py, pts[i].x,pts[i].y, pts[i+1].x,pts[i+1].y);
+    if(d<best) best=d;
+  }
+  return best;
+}
+// Nearest body of water — handles point features (lakes/reservoirs/bay) and
+// line features (rivers/streams, stored as full paths) in one search.
+// Water distance uses a spatial hash instead of brute force: with ~14,000
+// river/stream/lake features, checking every one per grid cell (thousands of
+// cells) would be far too slow. Segments are bucketed into ~900m cells;
+// a query only ever scans nearby buckets, expanding outward until it can
+// prove nothing farther away could possibly be closer.
+const WATER_BUCKET_SIZE = 900;
+let waterSpatialHash = null;
+function waterBucketKey(x,y){ return Math.floor(x/WATER_BUCKET_SIZE)+'_'+Math.floor(y/WATER_BUCKET_SIZE); }
+function addSegToHash(hash, x, y, seg){
+  const k = waterBucketKey(x,y);
+  let arr = hash.get(k);
+  if(!arr){ arr=[]; hash.set(k,arr); }
+  arr.push(seg);
+}
+function buildWaterSpatialHash(){
+  const hash = new Map();
+  for(const w of PROJ.WATER) addSegToHash(hash, w.wx, w.wy, {ax:w.wx,ay:w.wy,bx:w.wx,by:w.wy,name:w.n});
+  function addPolyline(wpts, name){
+    for(let i=0;i<wpts.length-1;i++){
+      const a=wpts[i], b=wpts[i+1];
+      const seg = {ax:a.x,ay:a.y,bx:b.x,by:b.y,name};
+      addSegToHash(hash, a.x, a.y, seg);
+      addSegToHash(hash, b.x, b.y, seg);
+    }
+  }
+  for(const r of PROJ.RIVERS) addPolyline(r.wpts, r.n);
+  for(const m of PROJ.MINOR_WATER) addPolyline(m.wpts, 'an unnamed creek');
+  return hash;
+}
+function nearestWater(px,py){
+  if(!waterSpatialHash) return {dist:Infinity, name:null};
+  const bx = Math.floor(px/WATER_BUCKET_SIZE), by = Math.floor(py/WATER_BUCKET_SIZE);
+  let bestDist=Infinity, bestName=null;
+  for(let radius=1; radius<=20; radius++){
+    for(let gx=bx-radius; gx<=bx+radius; gx++){
+      for(let gy=by-radius; gy<=by+radius; gy++){
+        if(radius>1 && Math.abs(gx-bx)<radius && Math.abs(gy-by)<radius) continue; // already scanned
+        const segs = waterSpatialHash.get(gx+'_'+gy);
+        if(!segs) continue;
+        for(const s of segs){
+          const d = distPointToSegment(px,py, s.ax,s.ay, s.bx,s.by);
+          if(d<bestDist){bestDist=d; bestName=s.name;}
+        }
+      }
+    }
+    if(bestDist <= radius*WATER_BUCKET_SIZE) break; // nothing farther out could beat this
+  }
+  return {dist:bestDist, name:bestName};
+}
+
+/* ============================== VTA GRAPH ============================== */
+let VTA_ADJ = null;
+function buildVtaGraph(){
+  VTA_ADJ = {};
+  for(const st of GEO_VTA) VTA_ADJ[st.n] = VTA_ADJ[st.n] || new Set();
+  for(const line of VTA_LINES){
+    const seq = line.stations_in_order;
+    for(let i=0;i<seq.length-1;i++){
+      VTA_ADJ[seq[i]].add(seq[i+1]);
+      VTA_ADJ[seq[i+1]].add(seq[i]);
+    }
+  }
+}
+function stopsWithin(refName, n){
+  const seen = new Map([[refName,0]]);
+  let frontier=[refName];
+  for(let hop=1; hop<=n; hop++){
+    const next=[];
+    for(const st of frontier){
+      for(const nb of (VTA_ADJ[st]||[])){
+        if(!seen.has(nb)){seen.set(nb,hop); next.push(nb);}
+      }
+    }
+    frontier=next;
+    if(!frontier.length) break;
+  }
+  return new Set(seen.keys());
+}
+
+/* ============================== STATE ============================== */
+const state = {
+  phase:'join', // join -> lobby -> playing
+  roomCode:null,
+  me:{id: localGet('jld_pid', null) || (()=>{const id=uid(); localSet('jld_pid',id); return id;})(), name: localGet('jld_name',''), role:null, isHost:false},
+  center:{...DEFAULT_CENTER}, radiusMi:DEFAULT_RADIUS_MI, roundNumber:1, started:false,
+  players:{}, // id -> {name,role,isHost}
+  locations:{}, // id -> {lat,lon,name,updatedAt}
+  questions:[], // array of docs {id,...}
+  locMode:'manual', // 'manual' | 'gps'
+  gpsAttempted:false,
+  isInteracting:false,
+  baseScale:null,
+  myLatLon:{...DEFAULT_CENTER},
+  watchId:null,
+  view:{panX:0, panY:0, scale:1},
+  activeTab:'questions',
+  panelCollapsed:false,
+  legendOpen:false,
+  layers:{VTA:true, MALLS:false, PARKS:false, THEATRES:false, HOSPITALS:false, LIBRARIES:false, WATER:false},
+  draft:null, // {bankKey, kind, params:{...}} local preview only
+  grid:null, // {n, half, cellM, cells:[{wx,wy}], possible:Uint8Array}
+  lastLocWrite:0,
+  db:null,
+};
+
+/* ============================== DB ==============================
+   Everyone's phones stay in sync through a shared record. There are two ways
+   to hold that record, and the app uses whichever is available:
+
+     1. Firebase — for hosting this file yourself (GitHub Pages, Neocities,
+        anywhere). Paste the settings Firebase gives you into FIREBASE_CONFIG
+        below and it takes over.
+     2. Claude's built-in storage — used automatically when this page is opened
+        as a Claude artifact. Needs no setup.
+
+   With neither, the app still runs perfectly well for a single player.
+
+   Both speak the same commands (doc, collection, get, set, update, add,
+   onSnapshot), so nothing else in this file has to change either way. */
+
+// Firebase project "diridion-divide", added 2026-09-05.
+// This key is not a secret — a Firebase web key is a public identifier that has
+// to ship inside the page. Access is controlled by the Firestore rules instead.
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyART_-aMfegWAOfbZuQtz-4TmmowDHzEp0",
+  authDomain: "diridion-divide.firebaseapp.com",
+  projectId: "diridion-divide",
+  storageBucket: "diridion-divide.firebasestorage.app",
+  messagingSenderId: "102987933989",
+  appId: "1:102987933989:web:d4eaa2e4908da3d45fd2cc"
+};
+
+const FIREBASE_VERSION = '10.14.1';
+function loadScript(src){
+  return new Promise((resolve, reject)=>{
+    const s = document.createElement('script');
+    s.src = src; s.onload = resolve; s.onerror = ()=>reject(new Error('could not load '+src));
+    document.head.appendChild(s);
+  });
+}
+async function initFirebase(){
+  if(!FIREBASE_CONFIG || !FIREBASE_CONFIG.projectId) return null;
+  try{
+    if(!window.firebase){
+      const base = `https://cdnjs.cloudflare.com/ajax/libs/firebase/${FIREBASE_VERSION}/`;
+      await loadScript(base+'firebase-app-compat.min.js');
+      await loadScript(base+'firebase-firestore-compat.min.js');
+    }
+    if(!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+    return firebase.firestore();
+  }catch(e){
+    console.warn('Firebase not reachable, falling back:', e);
+    return null;
+  }
+}
+async function initClaudeDb(){
+  if(!window.claude || !window.claude.use) return null;
+  try{ return (await window.claude.use('db')) || null; }
+  catch(e){ return null; }
+}
+async function getDb(){
+  if(state.db!==null) return state.db;
+  /* Claude first, deliberately. A Claude artifact will happily load the Firebase
+     library but then blocks its network traffic, which would look connected and
+     silently never sync. Claude's own storage is the right choice there, and
+     Firebase is the right choice everywhere else — where window.claude is absent. */
+  state.db = (await initClaudeDb()) || (await initFirebase()) || false;
+  return state.db;
+}
+function roomDoc(db){return db.doc('rooms/'+state.roomCode);}
+function playersCol(db){return db.collection('rooms/'+state.roomCode+'/players');}
+function locsCol(db){return db.collection('rooms/'+state.roomCode+'/locations');}
+function questionsCol(db){return db.collection('rooms/'+state.roomCode+'/questions');}
+
+let unsubs = [];
+function clearSubs(){unsubs.forEach(u=>{try{u();}catch(e){}}); unsubs=[];}
+
+async function enterRoom(code, creating){
+  state.roomCode = code;
+  const db = await getDb();
+  document.getElementById('soloNotice').hidden = !!db;
+  document.getElementById('roomCodeLbl').textContent = code;
+  document.getElementById('lobbyCode').textContent = code;
+
+  if(db){
+    if(creating){
+      await roomDoc(db).set({
+        centerLat: state.center.lat, centerLon: state.center.lon, radiusMi: state.radiusMi,
+        started:false, hostId: state.me.id, roundNumber:1, createdAt: Date.now(), directionalUsedRound:0
+      });
+      await playersCol(db).doc(state.me.id).set({name: state.me.name, role:null, isHost:true, joinedAt:Date.now()});
+      state.me.isHost = true;
+    } else {
+      const snap = await roomDoc(db).get();
+      if(!snap.exists){
+        await roomDoc(db).set({
+          centerLat: state.center.lat, centerLon: state.center.lon, radiusMi: state.radiusMi,
+          started:false, hostId: state.me.id, roundNumber:1, createdAt: Date.now(), directionalUsedRound:0
+        });
+        state.me.isHost = true;
+      }
+      const existing = await playersCol(db).doc(state.me.id).get();
+      await playersCol(db).doc(state.me.id).set({
+        name: state.me.name, role: existing.exists? (existing.data().role||null): null,
+        isHost: existing.exists? !!existing.data().isHost : false, joinedAt: existing.exists? existing.data().joinedAt: Date.now()
+      });
+      if(existing.exists && existing.data().isHost) state.me.isHost = true;
+    }
+
+    unsubs.push(roomDoc(db).onSnapshot(snap=>{
+      if(!snap.exists) return;
+      const d = snap.data();
+      const centerChanged = state.center.lat!==d.centerLat || state.center.lon!==d.centerLon || state.radiusMi!==d.radiusMi;
+      state.center = {lat:d.centerLat, lon:d.centerLon};
+      state.radiusMi = d.radiusMi;
+      state.started = !!d.started;
+      state.roundNumber = d.roundNumber||1;
+      if(centerChanged){ rebuildGeography(); renderAll(); }
+      recomputeElimination();
+      onRoomUpdate();
+    }));
+
+    unsubs.push(playersCol(db).onSnapshot(snap=>{
+      const p = {};
+      snap.docs.forEach(d=>{p[d.id]=d.data();});
+      state.players = p;
+      if(p[state.me.id]){
+        state.me.role = p[state.me.id].role;
+        state.me.isHost = !!p[state.me.id].isHost;
+      }
+      renderLobbyPlayers();
+      renderPanel();
+      updateRoleBadge();
+    }));
+
+    unsubs.push(locsCol(db).onSnapshot(snap=>{
+      const l = {};
+      snap.docs.forEach(d=>{l[d.id]=d.data();});
+      state.locations = l;
+      renderPlayers();
+    }));
+
+    unsubs.push(questionsCol(db).onSnapshot(snap=>{
+      state.questions = snap.docs.map(d=>({id:d.id, ...d.data()})).sort((a,b)=>a.askedAt-b.askedAt);
+      recomputeElimination();
+      renderQuestionsOverlay();
+      renderPanel();
+    }));
+  } else {
+    state.me.isHost = true;
+    state.players = {[state.me.id]: {name:state.me.name, role:state.me.role, isHost:true, joinedAt:Date.now()}};
+    ORIGIN = {...state.center};
+    reprojectAll();
+    buildGrid();
+    renderLobbyPlayers();
+  }
+
+  goPhase('lobby');
+}
+
+async function setRole(role){
+  state.me.role = role;
+  if(state.players[state.me.id]) state.players[state.me.id].role = role;
+  renderLobby();
+  const db = await getDb();
+  if(db) await playersCol(db).doc(state.me.id).update({role}).catch(async e=>{
+    await playersCol(db).doc(state.me.id).set({name:state.me.name, role, isHost:state.me.isHost, joinedAt:Date.now()});
+  });
+}
+
+async function startGame(){
+  const db = await getDb();
+  if(db) await roomDoc(db).update({started:true});
+  else { state.started = true; goPhase('playing'); }
+}
+
+async function newRound(){
+  const db = await getDb();
+  if(db) await roomDoc(db).update({roundNumber: state.roundNumber+1, directionalUsedRound:0});
+  else { state.roundNumber++; recomputeElimination(); renderPanel(); }
+}
+
+async function endGame(){
+  if(!confirm('End this game and start a new one? Everyone will pick roles again, and the question log and shaded map will be cleared. This can\'t be undone.')) return;
+  const db = await getDb();
+  if(db){
+    await roomDoc(db).update({started:false, roundNumber:1});
+    await Promise.all(Object.keys(state.players).map(id => playersCol(db).doc(id).update({role:null}).catch(()=>{})));
+    await Promise.all(state.questions.map(q => questionsCol(db).doc(q.id).delete().catch(()=>{})));
+    await Promise.all(Object.keys(state.locations).map(id => locsCol(db).doc(id).delete().catch(()=>{})));
+  } else {
+    state.started = false;
+    state.roundNumber = 1;
+    state.questions = [];
+    state.locations = {};
+    state.me.role = null;
+    if(state.players[state.me.id]) state.players[state.me.id].role = null;
+    recomputeElimination();
+    goPhase('lobby');
+  }
+}
+
+/* ============================== GEOLOCATION ============================== */
+function setLocMode(mode, opts){
+  opts = opts || {};
+  state.locMode = mode;
+  const chip = document.getElementById('locModeChip');
+  if(state.watchId!==null && navigator.geolocation){navigator.geolocation.clearWatch(state.watchId); state.watchId=null;}
+  if(mode==='gps'){
+    if(chip) chip.textContent = '📡 Finding you…';
+    if(navigator.geolocation){
+      state.watchId = navigator.geolocation.watchPosition(pos=>{
+        state.myLatLon = {lat:pos.coords.latitude, lon:pos.coords.longitude};
+        if(chip) chip.textContent = '📡 GPS tracking you';
+        onMyLocationUpdate();
+      }, err=>{
+        if(chip) chip.textContent = opts.silentFallback ? '📍 Tap map to set your spot' : '⚠️ No GPS — tap map instead';
+        state.locMode='manual';
+        state.watchId=null;
+      }, {enableHighAccuracy:true, maximumAge:5000});
+    } else {
+      state.locMode='manual';
+      if(chip) chip.textContent = '📍 Tap map to set your spot';
+    }
+  } else {
+    if(chip) chip.textContent = '📍 Tap map to set your spot';
+  }
+  renderPlayers();
+}
+let lastWriteLatLon=null;
+async function onMyLocationUpdate(){
+  renderPlayers();
+  checkThermometerProgress();
+  if(state.me.role!=='seeker' || !state.started) return;
+  const now = Date.now();
+  if(lastWriteLatLon){
+    const d = haversine(lastWriteLatLon.lat,lastWriteLatLon.lon,state.myLatLon.lat,state.myLatLon.lon);
+    if(d<15 && now-state.lastLocWrite<10000) return;
+  }
+  state.lastLocWrite = now; lastWriteLatLon={...state.myLatLon};
+  const db = await getDb();
+  if(db) await locsCol(db).doc(state.me.id).set({lat:state.myLatLon.lat, lon:state.myLatLon.lon, name:state.me.name, updatedAt:now}).catch(()=>{});
+}
+
+/* ============================== GRID / ELIMINATION ============================== */
+function buildGrid(){
+  const n = 56;
+  const half = milesToM(state.radiusMi) * 1.55;
+  const cellM = (2*half)/n;
+  const cells = new Array(n*n);
+  let i=0;
+  for(let gy=0; gy<n; gy++){
+    for(let gx=0; gx<n; gx++){
+      const wx = -half + (gx+0.5)*cellM;
+      const wy = -half + (gy+0.5)*cellM;
+      cells[i++] = {wx,wy};
+    }
+  }
+  state.grid = {n, half, cellM, cells, possible:new Uint8Array(n*n).fill(1)};
+}
+
+function questionMembership(q, wx, wy){
+  // returns true if (wx,wy) is on the "yes" / "A" / qualifying side of the question's geometry
+  const g = q.geometry;
+  if(q.kind==='radar'){
+    const dx=wx-g.cx, dy=wy-g.cy; return Math.sqrt(dx*dx+dy*dy) <= g.r;
+  }
+  if(q.kind==='therm'){
+    const da = Math.hypot(wx-g.ax, wy-g.ay), db_ = Math.hypot(wx-g.bx, wy-g.by);
+    return da <= db_; // true = closer to A
+  }
+  if(q.kind==='dir'){
+    if(g.axis==='ns') return wy >= g.py; // true = north
+    return wx >= g.px; // true = east
+  }
+  if(q.kind==='match'){
+    const list = PROJ[q.cat];
+    const nn = nearestOf(list, wx, wy);
+    return nn.index === g.refIndex;
+  }
+  if(q.kind==='water'){
+    const nn = nearestWater(wx, wy);
+    return nn.dist <= g.refDist; // true = closer to water than reference
+  }
+  if(q.kind==='vta'){
+    const nn = nearestOf(PROJ.VTA, wx, wy);
+    return g.qualifying.includes(PROJ.VTA[nn.index].n);
+  }
+  return true;
+}
+
+/* The shaded area is now derived straight from the questions when it is drawn,
+   rather than precomputed into a grid of squares, so this just asks for a
+   repaint. questionMembership() above is still the single definition of which
+   side of a question a point falls on, and is used for the text answers. */
+function recomputeElimination(){
+  drawElimCanvas();
+}
+
+/* ============================== QUESTION LOGIC ============================== */
+function bankStatus(key){
+  const bank = QUESTION_BANK.find(b=>b.key===key);
+  const relevant = state.questions.filter(q=>q.bankKey===key && (bank.once==='round' ? (q.roundNumber||1)===state.roundNumber : true));
+  const resolved = relevant.find(q=>q.status==='answered_yes'||q.status==='answered_no');
+  if(resolved) return {state:'used', q:resolved};
+  const pending = relevant.find(q=>q.status==='pending'||q.status==='tracking');
+  if(pending) return {state:'pending', q:pending};
+  return {state:'available'};
+}
+
+function buildGeometry(bank, params){
+  const w = toWorld(params.refLat, params.refLon);
+  if(bank.kind==='radar'){
+    return {cx:w.x, cy:w.y, r:params.radiusM};
+  }
+  if(bank.kind==='match'){
+    const nn = nearestOf(PROJ[bank.cat], w.x, w.y);
+    return {refIndex:nn.index, refName:PROJ[bank.cat][nn.index].n, refDist:nn.dist};
+  }
+  if(bank.kind==='water'){
+    const nn = nearestWater(w.x, w.y);
+    return {refDist:nn.dist, refName:nn.name};
+  }
+  if(bank.kind==='dir'){
+    return {axis:params.axis, px:w.x, py:w.y};
+  }
+  if(bank.kind==='vta'){
+    const qualifying = [...stopsWithin(params.station, params.stops)];
+    return {station:params.station, stops:params.stops, qualifying};
+  }
+  if(bank.kind==='therm'){
+    return {ax:w.x, ay:w.y, distM:params.distM};
+  }
+}
+
+function startDraft(bank){
+  const params = {refLat: state.myLatLon.lat, refLon: state.myLatLon.lon};
+  if(bank.kind==='radar') params.radiusM = bank.custom ? (state.draftCustomRadiusM||1000) : bank.radiusM;
+  if(bank.kind==='dir') params.axis = state.draftAxis || 'ns';
+  if(bank.kind==='vta'){ params.station = state.draftVtaStation || bank.defaultStation; params.stops = state.draftVtaStops || bank.defaultStops; }
+  if(bank.kind==='therm') params.distM = bank.distM;
+  state.draft = {bankKey:bank.key, kind:bank.kind, bank, params};
+  recomputeDraftPreview();
+  renderQuestionsOverlay();
+  renderPanel();
+}
+function cancelDraft(){state.draft=null; renderQuestionsOverlay(); renderPanel(); drawElimCanvas();}
+function recomputeDraftPreview(){
+  // The preview is drawn straight from state.draft, so this is just a repaint.
+  drawElimCanvas();
+}
+
+async function askDraft(){
+  if(!state.draft) return;
+  const {bank, params, kind} = state.draft;
+  const db = await getDb();
+  const id = uid();
+  const geometry = buildGeometry(bank, params);
+  const doc = {
+    bankKey:bank.key, label:bank.label, kind, cat: bank.cat||null, params, geometry,
+    status: kind==='therm' ? 'tracking' : 'pending',
+    askedBy: state.me.name, askedById: state.me.id, askedAt: Date.now(), roundNumber: state.roundNumber,
+  };
+  if(kind==='therm'){ doc.thermStartLat = params.refLat; doc.thermStartLon = params.refLon; }
+  if(bank.key==='powerup_dir'){
+    const db2 = await getDb();
+    if(db2) await roomDoc(db2).update({directionalUsedRound: state.roundNumber});
+  }
+  if(db){
+    const ref = await questionsCol(db).add(doc);
+    if(kind==='therm') state.myThermQuestionId = ref.id;
+  } else {
+    doc.id = id; state.questions.push(doc);
+    if(kind==='therm') state.myThermQuestionId = id;
+    recomputeElimination(); renderQuestionsOverlay(); renderPanel();
+  }
+  state.draft = null;
+  state.draftMembership = null;
+  drawElimCanvas();
+}
+
+async function answerQuestion(q, answer){
+  const db = await getDb();
+  const patch = {status: answer, resolvedAt: Date.now()};
+  if(db) await questionsCol(db).doc(q.id).update(patch);
+  else { Object.assign(state.questions.find(x=>x.id===q.id), patch); recomputeElimination(); renderQuestionsOverlay(); renderPanel(); }
+}
+
+async function undoAnswer(q){
+  const patch = {status:'pending', resolvedAt:null};
+  const db = await getDb();
+  if(db) await questionsCol(db).doc(q.id).update(patch);
+  else { Object.assign(state.questions.find(x=>x.id===q.id), patch); recomputeElimination(); renderQuestionsOverlay(); renderPanel(); }
+}
+
+function checkThermometerProgress(){
+  const tracking = state.questions.find(q=>q.kind==='therm' && q.status==='tracking' && q.askedById===state.me.id);
+  if(!tracking) return;
+  const d = haversine(tracking.thermStartLat, tracking.thermStartLon, state.myLatLon.lat, state.myLatLon.lon);
+  if(d >= tracking.geometry.distM){
+    const w = toWorld(state.myLatLon.lat, state.myLatLon.lon);
+    const geometry = {...tracking.geometry, bx:w.x, by:w.y};
+    finishThermometer(tracking, geometry);
+  }
+}
+async function finishThermometer(q, geometry){
+  const db = await getDb();
+  const patch = {status:'pending', geometry};
+  if(db) await questionsCol(db).doc(q.id).update(patch);
+  else { Object.assign(state.questions.find(x=>x.id===q.id), patch); recomputeElimination(); renderQuestionsOverlay(); renderPanel(); }
+}
+
+/* ============================== RENDER: MAP SETUP ============================== */
+const svg = document.getElementById('mapSvg');
+const canvas = document.getElementById('elimCanvas');
+const NS = 'http://www.w3.org/2000/svg';
+function el(tag, attrs){const e=document.createElementNS(NS,tag); for(const k in attrs) e.setAttribute(k,attrs[k]); return e;}
+
+let W=0,H=0,DPR=1;
+function resizeCanvas(){
+  const r = document.getElementById('mapWrap').getBoundingClientRect();
+  if(r.width<10 || r.height<10){ requestAnimationFrame(resizeCanvas); return; }
+  W = r.width; H = r.height; DPR = window.devicePixelRatio||1;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  canvas.width = W*DPR; canvas.height = H*DPR;
+  canvas.style.width=W+'px'; canvas.style.height=H+'px';
+  drawElimCanvas();
+  renderAll();
+}
+window.addEventListener('resize', resizeCanvas);
+/* The map area also changes size when the bottom panel is opened, collapsed or
+   switched to a taller tab, and when a phone browser's toolbar slides away.
+   None of those fire a window resize event, so without this the map keeps
+   drawing at its old size and ends up letterboxed and off-centre. */
+if(window.ResizeObserver){
+  let lastW=0, lastH=0;
+  new ResizeObserver(entries=>{
+    const r = entries[0].contentRect;
+    if(Math.abs(r.width-lastW)<1 && Math.abs(r.height-lastH)<1) return;
+    lastW=r.width; lastH=r.height;
+    resizeCanvas();
+  }).observe(document.getElementById('mapWrap'));
+}
+
+function screenOf(wx,wy){
+  return {x: W/2 + state.view.panX + wx*state.view.scale, y: H/2 + state.view.panY - wy*state.view.scale};
+}
+function worldOfScreen(sx,sy){
+  return {x: (sx - W/2 - state.view.panX)/state.view.scale, y: -(sy - H/2 - state.view.panY)/state.view.scale};
+}
+function initialScale(){
+  const radiusM = milesToM(state.radiusMi);
+  const dim = Math.max(Math.min(W,H), 100);
+  return (dim*0.42)/radiusM;
+}
+function resetView(){
+  state.view.scale = initialScale();
+  state.baseScale = state.view.scale;
+  state.view.panX = 0; state.view.panY = 0;
+  renderAll();
+}
+function centerOnMe(){
+  const w = toWorld(state.myLatLon.lat, state.myLatLon.lon);
+  state.view.panX = -w.x*state.view.scale;
+  state.view.panY = w.y*state.view.scale;
+  renderAll();
+}
+
+/* Layer groups */
+const gBasemap = el('g'), gRadius = el('g'), gWater = el('g'), gPois = el('g'), gVta = el('g'), gQ = el('g'), gPlayers = el('g'), gDraft = el('g');
+let catGroups = {};
+svg.append(gBasemap, gWater, gRadius, gPois, gVta, gQ, gDraft, gPlayers);
+
+function buildBasemap(){
+  gBasemap.innerHTML='';
+  // hills
+  for(const h of HILLS){
+    const w = toWorld(h.cx,h.cy);
+    const e = el('ellipse',{cx:w.x,cy:-w.y,rx:h.rx*111000,ry:h.ry*111000, transform:`rotate(${h.rot} ${w.x} ${-w.y})`, fill:'var(--surface-3)', opacity:'0.5', 'data-static':'hill'});
+    gBasemap.appendChild(e);
+  }
+  for(const rd of ROADS){
+    const d = rd.pts.map((p,i)=>{const w=toWorld(p[0],p[1]); return (i===0?'M':'L')+w.x+','+(-w.y);}).join(' ');
+    gBasemap.appendChild(el('path',{d, fill:'none', stroke:'var(--accent)', 'stroke-width':'3', opacity:'0.55', 'stroke-linecap':'round','stroke-linejoin':'round','vector-effect':'non-scaling-stroke','data-static':'road'}));
+  }
+  for(const c of CITY_LABELS){
+    const w = toWorld(c[1],c[2]);
+    const wrap = el('g', {transform:`translate(${w.x},${-w.y})`, 'data-static':'citylabel'});
+    const t = el('text', {class:'map-label', 'font-size': c[3]?'14':'11', 'text-anchor':'middle', dy:'4'});
+    t.textContent = c[0];
+    wrap.appendChild(t);
+    gBasemap.appendChild(wrap);
+  }
+}
+function poiIcon(kind){
+  const glyphs = {MALLS:'🛍️',PARKS:'🌳',THEATRES:'🎬',HOSPITALS:'🏥',LIBRARIES:'📚'};
+  return glyphs[kind]||'•';
+}
+let allPlaceLabels = []; // {el, wx, wy, text, cat} for declutter — cat is 'VTA' or a POI_COLORS key
+/* There are ~2,500 places on this map, each with a dot and a name. Re-finding
+   them with querySelectorAll on every animation frame was the main cause of
+   scroll lag on phones, so the markers are collected once here and reused. */
+let markerCache = {stationDots:[], poiDots:[], placeLabels:[]};
+function buildStaticMarkers(){
+  gPois.innerHTML=''; gVta.innerHTML=''; gWater.innerHTML='';
+  catGroups = {};
+  allPlaceLabels = [];
+  markerCache = {stationDots:[], poiDots:[], placeLabels:[]};
+  lastScaledScale = null; // fresh markers always need their first sizing pass
+  for(const st of PROJ.VTA){
+    const g = el('g', {transform:`translate(${st.wx},${-st.wy})`, class:'vta-marker'});
+    const dot = el('rect',{x:-4.5,y:-4.5,width:9,height:9,class:'station-dot'});
+    g.appendChild(dot);
+    markerCache.stationDots.push(dot);
+    const label = el('text', {class:'map-label place-label', 'font-size':'10', 'text-anchor':'middle', dy:'-10'});
+    label.textContent = st.n;
+    label.style.display='none';
+    g.appendChild(label);
+    markerCache.placeLabels.push(label);
+    gVta.appendChild(g);
+    allPlaceLabels.push({el:label, wx:st.wx, wy:st.wy, text:st.n, cat:'VTA', dy:10});
+  }
+  gVta.style.display = state.layers.VTA ? '' : 'none';
+  for(const cat of Object.keys(POI_COLORS)){
+    const catG = el('g', {'data-catgroup':cat});
+    catG.style.display = state.layers[cat] ? '' : 'none';
+    for(const p of PROJ[cat]){
+      const g = el('g', {transform:`translate(${p.wx},${-p.wy})`, class:'poi-marker', 'data-cat':cat});
+      const dot = el('circle',{r:4, fill:POI_COLORS[cat], class:'poi-dot'});
+      g.appendChild(dot);
+      markerCache.poiDots.push(dot);
+      const label = el('text', {class:'map-label place-label', 'font-size':'10', 'text-anchor':'middle', dy:'-9'});
+      label.textContent = p.n;
+      label.style.display='none';
+      g.appendChild(label);
+      markerCache.placeLabels.push(label);
+      if(p.n !== 'Unnamed body of water') allPlaceLabels.push({el:label, wx:p.wx, wy:p.wy, text:p.n, cat, dy:9});
+      catG.appendChild(g);
+    }
+    gPois.appendChild(catG);
+    catGroups[cat] = catG;
+  }
+  for(const riv of PROJ.RIVERS){
+    if(riv.wpts.length<2) continue;
+    const d = riv.wpts.map((p,i)=>(i===0?'M':'L')+p.x+','+(-p.y)).join(' ');
+    gWater.appendChild(el('path',{d, fill:'none', stroke:POI_COLORS.WATER, 'stroke-width':'1.8', opacity:'0.85', 'stroke-linecap':'round','stroke-linejoin':'round','vector-effect':'non-scaling-stroke'}));
+    const mid = riv.wpts[Math.floor(riv.wpts.length/2)];
+    const g = el('g', {transform:`translate(${mid.x},${-mid.y})`});
+    const label = el('text', {class:'map-label place-label', 'font-size':'10', 'text-anchor':'middle', dy:'-6'});
+    label.textContent = riv.n;
+    label.style.display='none';
+    g.appendChild(label);
+    markerCache.placeLabels.push(label);
+    gWater.appendChild(g);
+    // Creeks and rivers are drawn as lines with a name at the midpoint — there
+    // is no dot at that spot, so it must not reserve space like one.
+    allPlaceLabels.push({el:label, wx:mid.x, wy:mid.y, text:riv.n, cat:'WATER', dy:6, noMarker:true});
+  }
+  gWater.style.display = state.layers.WATER ? '' : 'none';
+}
+function setLayerVisible(key, visible){
+  state.layers[key] = visible;
+  if(key==='VTA') gVta.style.display = visible ? '' : 'none';
+  else if(catGroups[key]) catGroups[key].style.display = visible ? '' : 'none';
+  if(key==='WATER') gWater.style.display = visible ? '' : 'none';
+  declutterPlaceLabels();
+}
+
+function drawRadiusCircle(){
+  gRadius.innerHTML='';
+  const r = milesToM(state.radiusMi);
+  gRadius.appendChild(el('circle',{cx:0,cy:0,r, fill:'none', stroke:'var(--ink-faint)', 'stroke-width':'2', 'stroke-dasharray':'10 8', 'vector-effect':'non-scaling-stroke'}));
+}
+
+const MAP_GROUPS = [gBasemap,gWater,gRadius,gPois,gVta,gQ,gDraft,gPlayers];
+function applyViewTransform(){
+  const t = `translate(${W/2+state.view.panX},${H/2+state.view.panY}) scale(${state.view.scale})`;
+  for(const g of MAP_GROUPS) g.setAttribute('transform', t);
+}
+
+/* Highlights the "Whole map" button whenever the view has drifted from its
+   default, so there is always a visible way back from a deep zoom. Compares a
+   pair of numbers and bails out unless the answer changed, so it is safe to
+   call on every frame. */
+let recenterLit = null;
+function updateRecenterHint(){
+  const v = state.view;
+  const base = state.baseScale;
+  const away = !!base && (Math.abs(v.scale - base) > base*0.01 || v.panX !== 0 || v.panY !== 0);
+  if(away === recenterLit) return;
+  recenterLit = away;
+  const b = document.getElementById('recenterBtn');
+  if(b) b.classList.toggle('nudge', away);
+}
+
+/* Cheap path, used while a finger is down. Panning and pinching only need the
+   map group moved and the shading repainted — nothing needs rebuilding. */
+function renderView(){
+  applyViewTransform();
+  drawElimCanvas();
+  updateRecenterHint();
+}
+let viewFrameQueued = false;
+function scheduleView(){
+  if(viewFrameQueued) return;
+  viewFrameQueued = true;
+  requestAnimationFrame(()=>{ viewFrameQueued = false; renderView(); });
+}
+
+/* Full path, used when the view settles or the game state changes. */
+function renderAll(){
+  applyViewTransform();
+  renderPlayers();
+  renderQuestionsOverlay();
+  scaleFixedElements();
+  drawElimCanvas();
+  updateRecenterHint();
+}
+
+/* Player and question markers are few and are rebuilt from scratch whenever
+   they change, so they always need resizing. */
+function scaleDynamicElements(){
+  const s = state.view.scale;
+  const mg = markerGrowth(), lf = labelGrowth();
+  /* The pins hold a constant size on screen, so their geometry is rebuilt in
+     world units whenever the zoom changes. */
+  const h = PIN_HEIGHT*mg/s, r = h/PIN_BULB_RATIO;
+  const dPath = pinPath(h);
+  document.querySelectorAll('.player-pin').forEach(p=>{
+    p.setAttribute('d', dPath);
+    p.setAttribute('stroke-width', 1.7*mg/s);
+  });
+  document.querySelectorAll('.player-pin-hole').forEach(c=>{
+    c.setAttribute('cy', -2.2*r);
+    c.setAttribute('r', r*0.36);
+  });
+  // Name sits clear of the top of the bulb.
+  const nameDy = -(PIN_HEIGHT*mg + 5)/lf;
+  document.querySelectorAll('.player-label').forEach(t=>{
+    t.setAttribute('transform', `scale(${lf/s})`);
+    t.setAttribute('dy', nameDy.toFixed(2));
+  });
+  document.querySelectorAll('[data-qmark="1"]').forEach(c=>c.setAttribute('r', (+c.dataset.baser)*mg/s));
+}
+
+/* Place names and markers are drawn at a constant size on screen rather than
+   scaling with the map, otherwise they would balloon absurdly. But holding them
+   at *exactly* one size means zooming into a single station never makes its name
+   any easier to read. So the on-screen size grows with the zoom level — by the
+   square root of it, which is gentle enough that names never swallow the map,
+   and capped at each end.
+
+   Sub-linear growth also keeps the map decluttering properly as you zoom: dots
+   spread apart in step with the zoom while names grow more slowly, so more names
+   keep fitting in, each one bigger than before. */
+function zoomRatio(){
+  const base = state.baseScale || state.view.scale;
+  return Math.max((state.view.scale || 1) / (base || 1), 0.01);
+}
+function labelGrowth(){ return Math.min(2.4, Math.max(1.15, 1.15 * Math.sqrt(zoomRatio()))); }
+/* Markers grow more slowly than names and stop sooner — they only need to stay
+   easy to hit, and a dot that keeps pace with the text ends up covering it. */
+function markerGrowth(){ return Math.min(1.55, Math.max(1, Math.pow(zoomRatio(), 0.32))); }
+/* Station squares are 11 wide and POI dots are 5.5 in radius, so both reach the
+   same distance from their centre. */
+function markerSizePx(){ return 11 * markerGrowth(); }
+
+/* Resizing the ~9,000 static place dots and names is by far the most expensive
+   thing the map does, and it only matters when the zoom level changed — panning
+   leaves every one of them the same size. */
+let lastScaledScale = null;
+function scaleFixedElements(){
+  scaleDynamicElements();
+  const s = state.view.scale;
+  if(s !== lastScaledScale){
+    lastScaledScale = s;
+    const mg = markerGrowth();
+    const size = 11*mg/s, corner = -size/2;
+    for(const c of markerCache.stationDots){
+      c.setAttribute('x', corner); c.setAttribute('y', corner);
+      c.setAttribute('width', size); c.setAttribute('height', size);
+    }
+    const r = 5.5*mg/s;
+    for(const c of markerCache.poiDots) c.setAttribute('r', r);
+    const lt = `scale(${labelGrowth()/s})`;
+    for(const t of markerCache.placeLabels) t.setAttribute('transform', lt);
+  }
+  if(!state.isInteracting) declutterPlaceLabels();
+}
+
+/* Auto-declutter place names: show as many as fit without overlapping,
+   favoring whichever are closest to the center of the screen. Naturally
+   reveals more names as you zoom in (dots spread apart on screen) without
+   any fixed zoom cutoff. */
+const DECLUTTER_MAX_CANDIDATES = 350;
+function declutterPlaceLabels(){
+  const candidates = [];
+  const cx = W/2, cy = H/2;
+  const margin = 60;
+  for(const p of allPlaceLabels){
+    if(p.cat==='VTA' ? !state.layers.VTA : !state.layers[p.cat]){ p.el.style.display='none'; continue; }
+    const s = screenOf(p.wx, p.wy);
+    if(s.x < -margin || s.x > W+margin || s.y < -margin || s.y > H+margin){ p.el.style.display='none'; continue; }
+    candidates.push({p, x:s.x, y:s.y, d:(s.x-cx)*(s.x-cx)+(s.y-cy)*(s.y-cy)});
+  }
+  if(candidates.length > DECLUTTER_MAX_CANDIDATES){
+    for(const c of candidates) c.p.el.style.display='none';
+    return;
+  }
+  candidates.sort((a,b)=>a.d-b.d);
+
+  /* Seed the occupied boxes with the markers themselves, so a name never lands
+     on top of a neighbouring station square or dot. */
+  const half = markerSizePx()/2 + 1;
+  const placed = [];
+  for(const c of candidates){
+    if(c.p.noMarker) continue;
+    placed.push({x1:c.x-half, x2:c.x+half, y1:c.y-half, y2:c.y+half});
+  }
+
+  /* Boxes track the same growth the labels use, or bigger names would silently
+     start colliding. Each name is tried above its marker first and then on the
+     other three sides — insisting on "above" alone means a name is dropped the
+     moment a neighbouring dot happens to sit there, which hides most of the map
+     in the dense downtown stretch. */
+  const lf = labelGrowth();
+  const padX = 3, padY = 2, labelH = 11*lf, gap = markerSizePx()/2 + 4*lf;
+  const hits = rect => {
+    for(const r of placed){
+      if(rect.x1 < r.x2 && rect.x2 > r.x1 && rect.y1 < r.y2 && rect.y2 > r.y1) return true;
+    }
+    return false;
+  };
+  for(const c of candidates){
+    const w = (c.p.text.length*5.3 + 6) * lf;
+    const mid = labelH*0.36; // nudge so side-set names read as vertically centred
+    const spots = [
+      {bx:c.x,           by:c.y-gap,           anchor:'middle', x1:c.x-w/2,     x2:c.x+w/2},
+      {bx:c.x,           by:c.y+gap+labelH,    anchor:'middle', x1:c.x-w/2,     x2:c.x+w/2},
+      {bx:c.x+gap,       by:c.y+mid,           anchor:'start',  x1:c.x+gap,     x2:c.x+gap+w},
+      {bx:c.x-gap,       by:c.y+mid,           anchor:'end',    x1:c.x-gap-w,   x2:c.x-gap},
+    ];
+    let chosen = null;
+    for(const sp of spots){
+      const rect = {x1:sp.x1-padX, x2:sp.x2+padX, y1:sp.by-labelH-padY, y2:sp.by+padY};
+      if(!hits(rect)){ chosen = {sp, rect}; break; }
+    }
+    if(!chosen){ c.p.el.style.display='none'; continue; }
+    const el_ = c.p.el;
+    // dx/dy live inside the label's own scaled space, so divide the screen
+    // offset back out by the growth factor.
+    el_.setAttribute('dx', ((chosen.sp.bx - c.x)/lf).toFixed(2));
+    el_.setAttribute('dy', ((chosen.sp.by - c.y)/lf).toFixed(2));
+    el_.setAttribute('text-anchor', chosen.sp.anchor);
+    el_.style.display='';
+    placed.push(chosen.rect);
+  }
+}
+
+/* Players layer
+
+   People are drawn as teardrop pins rather than filled circles. A circle
+   centred on a position reads as "somewhere in this blob", which at a 20-mile
+   view looks like it covers half a mile. A pin's tip sits exactly on the
+   coordinate and the bulb hangs above it, so it points at one spot however far
+   you zoom out. */
+const PIN_HEIGHT = 24;      // screen px, tip to top of bulb
+const PIN_BULB_RATIO = 3.2; // height = 3.2 x bulb radius
+
+/* Tip at (0,0), bulb above it. The two straight edges run along the tangents
+   from the tip to the bulb circle, so the point and the round head meet
+   smoothly instead of showing a corner. */
+function pinPath(h){
+  const r = h/PIN_BULB_RATIO, d = 2.2*r;
+  const L = Math.sqrt(d*d - r*r);
+  const tx = r*L/d, ty = -d + (r*r)/d;
+  return `M0,0 L${(-tx).toFixed(3)},${ty.toFixed(3)} A${r.toFixed(3)},${r.toFixed(3)} 0 1,1 ${tx.toFixed(3)},${ty.toFixed(3)} Z`;
+}
+
+function renderPlayers(){
+  gPlayers.innerHTML='';
+  const addPin = (lat, lon, color, name, isMe) => {
+    const w = toWorld(lat, lon);
+    const g = el('g',{transform:`translate(${w.x},${-w.y})`, class:'player-pin-g'});
+    g.appendChild(el('path',{d:'', fill:color, stroke:'#fff', 'stroke-linejoin':'round', class:'player-pin'}));
+    g.appendChild(el('circle',{cx:0, cy:0, r:0, fill:'#fff', class:'player-pin-hole'}));
+    const t = el('text',{class:'map-label player-label','font-size':'11','text-anchor':'middle', dy:'-16'});
+    t.textContent = name;
+    if(isMe) t.setAttribute('font-weight','700');
+    g.appendChild(t);
+    gPlayers.appendChild(g);
+  };
+
+  addPin(state.myLatLon.lat, state.myLatLon.lon,
+         state.me.role==='hider' ? 'var(--hider)' : 'var(--seeker)', 'You', true);
+
+  if(state.started){
+    for(const [id,loc] of Object.entries(state.locations)){
+      if(id===state.me.id) continue;
+      addPin(loc.lat, loc.lon, 'var(--seeker)', loc.name||'Seeker', false);
+    }
+  }
+  scaleDynamicElements();
+}
+
+/* Draft preview + active question geometry */
+function renderQuestionsOverlay(){
+  gQ.innerHTML=''; gDraft.innerHTML='';
+  const active = state.questions.filter(q=>(q.roundNumber||1)===state.roundNumber && q.status!=='vetoed');
+  for(const q of active) drawQuestionGeom(gQ, q, false);
+  if(state.draft){
+    const fake = {kind:state.draft.kind, cat:state.draft.bank.cat, params:state.draft.params, geometry: buildGeometry(state.draft.bank, state.draft.params)};
+    drawQuestionGeom(gDraft, fake, true);
+  }
+  scaleDynamicElements();
+}
+function drawQuestionGeom(target, q, isDraft){
+  const stroke = isDraft ? 'var(--accent)' : 'var(--ink)';
+  const dash = isDraft ? '4 4' : (q.status==='tracking'?'2 6':'none');
+  const opacity = isDraft ? '0.9' : (q.status && q.status.startsWith('answered') ? '0.35':'0.85');
+  const g = q.geometry;
+  if(!g) return;
+  if(q.kind==='radar'){
+    target.appendChild(el('circle',{cx:g.cx,cy:-g.cy,r:g.r, fill: isDraft? 'color-mix(in srgb, var(--accent) 12%, transparent)':'none', stroke, 'stroke-width':2/state.view.scale, 'stroke-dasharray':dash, opacity}));
+    target.appendChild(el('circle',{cx:g.cx,cy:-g.cy,r:6/state.view.scale, fill:stroke, 'data-qmark':'1','data-baser':'6'}));
+  } else if(q.kind==='therm'){
+    if(g.bx!==undefined){
+      const mx=(g.ax+g.bx)/2, my=(g.ay+g.by)/2;
+      const dx=g.bx-g.ax, dy=g.by-g.ay; const len=Math.hypot(dx,dy)||1;
+      const px=-dy/len, py=dx/len; const ext=milesToM(state.radiusMi)*2;
+      target.appendChild(el('line',{x1:mx+px*ext,y1:-(my+py*ext),x2:mx-px*ext,y2:-(my-py*ext), stroke, 'stroke-width':2.5/state.view.scale, 'stroke-dasharray':dash, opacity}));
+      target.appendChild(el('circle',{cx:g.ax,cy:-g.ay,r:6/state.view.scale, fill:'var(--ink)','data-qmark':'1','data-baser':'6'}));
+      target.appendChild(el('circle',{cx:g.bx,cy:-g.by,r:6/state.view.scale, fill:'var(--ink)','data-qmark':'1','data-baser':'6'}));
+    } else {
+      target.appendChild(el('circle',{cx:g.ax,cy:-g.ay,r:9/state.view.scale, fill:'none', stroke:'var(--warn)','stroke-width':2/state.view.scale,'stroke-dasharray':'3 4','data-qmark':'1','data-baser':'9'}));
+    }
+  } else if(q.kind==='dir'){
+    const ext = milesToM(state.radiusMi)*2;
+    if(g.axis==='ns'){
+      target.appendChild(el('line',{x1:g.px-ext,y1:-g.py,x2:g.px+ext,y2:-g.py, stroke,'stroke-width':2.5/state.view.scale,'stroke-dasharray':dash, opacity}));
+    } else {
+      target.appendChild(el('line',{x1:g.px,y1:-(g.py-ext),x2:g.px,y2:-(g.py+ext), stroke,'stroke-width':2.5/state.view.scale,'stroke-dasharray':dash, opacity}));
+    }
+    target.appendChild(el('circle',{cx:g.px,cy:-g.py,r:6/state.view.scale, fill:stroke,'data-qmark':'1','data-baser':'6'}));
+  } else if(q.kind==='match' || q.kind==='water' || q.kind==='vta'){
+    // draw a marker at the reference and let the shaded grid convey the boundary once answered
+    if(q.params){
+      const w = toWorld(q.params.refLat, q.params.refLon);
+      target.appendChild(el('circle',{cx:w.x,cy:-w.y,r:7/state.view.scale, fill:'none', stroke, 'stroke-width':2.5/state.view.scale,'data-qmark':'1','data-baser':'7'}));
+    }
+    if(q.kind==='match' && q.cat && g.refIndex>=0){
+      const poi = PROJ[q.cat][g.refIndex];
+      target.appendChild(el('circle',{cx:poi.wx,cy:-poi.wy,r:11/state.view.scale, fill:'none', stroke:'var(--accent)','stroke-width':3/state.view.scale,'data-qmark':'1','data-baser':'11'}));
+    }
+  }
+}
+
+/* Elimination canvas (crosshatch) */
+let hatchPattern=null;
+function getHatch(ctx){
+  if(hatchPattern) return hatchPattern;
+  const pc = document.createElement('canvas'); pc.width=10; pc.height=10;
+  const pctx = pc.getContext('2d');
+  const line = getComputedStyle(document.body).getPropertyValue('--elim-line').trim() || 'rgba(0,0,0,0.6)';
+  pctx.strokeStyle = line; pctx.lineWidth=2;
+  pctx.beginPath(); pctx.moveTo(0,10); pctx.lineTo(10,0); pctx.moveTo(-2,2); pctx.lineTo(2,-2); pctx.moveTo(8,12); pctx.lineTo(12,8);
+  pctx.stroke();
+  hatchPattern = ctx.createPattern(pc,'repeat');
+  return hatchPattern;
+}
+/* ---- Exact question regions -------------------------------------------
+   Every question's answer carves the map along a real geometric boundary: a
+   circle for radar, a straight line for thermometers and directional, the
+   cell of nearest-ness for "nearest park", a band along the creeks for water.
+
+   These used to be approximated by testing a 56x56 grid and shading whole
+   squares, which rounded every curve and diagonal into mile-wide steps and
+   visibly ate into the inside of a radar circle. Instead each region is now
+   drawn as an actual canvas path and the regions are intersected with each
+   other by compositing, so the shaded edge lands exactly on the boundary. */
+
+// Clip a polygon to the half-plane { p : (p - P)·N >= 0 }. Sutherland-Hodgman.
+function clipToHalfPlane(poly, px, py, nx, ny){
+  if(poly.length < 3) return [];
+  const side = (x,y)=> (x-px)*nx + (y-py)*ny;
+  const out = [];
+  for(let i=0;i<poly.length;i++){
+    const a = poly[i], b = poly[(i+1)%poly.length];
+    const sa = side(a[0],a[1]), sb = side(b[0],b[1]);
+    if(sa >= 0) out.push(a);
+    if((sa >= 0) !== (sb >= 0)){
+      const t = sa/(sa-sb);
+      out.push([a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t]);
+    }
+  }
+  return out;
+}
+/* The set of points whose nearest member of `list` is list[index] — the exact
+   region behind every "nearest park / mall / station" answer. It is the
+   intersection of the half-planes lying on this point's side of the midline
+   between it and each other point. */
+function nearestCellPolygon(list, index, extent){
+  const ref = list[index];
+  if(!ref) return [];
+  let poly = [[-extent,-extent],[extent,-extent],[extent,extent],[-extent,extent]];
+  for(let i=0;i<list.length && poly.length>=3;i++){
+    if(i===index) continue;
+    const o = list[i];
+    const nx = ref.wx-o.wx, ny = ref.wy-o.wy;
+    if(nx===0 && ny===0) continue;
+    poly = clipToHalfPlane(poly, (ref.wx+o.wx)/2, (ref.wy+o.wy)/2, nx, ny);
+  }
+  return poly;
+}
+
+/* The whole water network as one reusable path in world coordinates. Stroking
+   it with a line width of twice a distance gives precisely the set of points
+   within that distance of any water — round caps and joins make the stroke the
+   exact Minkowski sum of the network with a circle. */
+let waterPathCache = null;
+function getWaterPath(){
+  if(waterPathCache) return waterPathCache;
+  const p = new Path2D();
+  const addLines = list => {
+    for(const r of list){
+      if(!r.wpts || r.wpts.length<2) continue;
+      p.moveTo(r.wpts[0].x, r.wpts[0].y);
+      for(let i=1;i<r.wpts.length;i++) p.lineTo(r.wpts[i].x, r.wpts[i].y);
+    }
+  };
+  addLines(PROJ.RIVERS);
+  /* The unnamed creeks are not drawn on the map as blue lines, but they are
+     still water for the purposes of the question, and nearestWater() counts
+     them — so the shaded region has to count them too. */
+  addLines(PROJ.MINOR_WATER || []);
+  // Standalone ponds and lakes are single points; a zero-length subpath with a
+  // round cap renders as a disc of the same radius.
+  for(const w of PROJ.WATER){ p.moveTo(w.wx, w.wy); p.lineTo(w.wx, w.wy); }
+  waterPathCache = p;
+  return p;
+}
+
+// Run fn with the context mapped so drawing can use world coordinates directly.
+function inWorldSpace(c, fn){
+  c.save();
+  c.translate(W/2 + state.view.panX, H/2 + state.view.panY);
+  c.scale(state.view.scale, -state.view.scale);
+  fn();
+  c.restore();
+}
+
+// Paint the region where questionMembership() would be true for this question.
+function paintTrueRegion(c, q){
+  const g = q.geometry;
+  if(!g) return;
+  const extent = milesToM(state.radiusMi) * 6; // comfortably past the play area
+  const poly = pts => {
+    if(pts.length < 3) return;
+    c.beginPath();
+    c.moveTo(pts[0][0], pts[0][1]);
+    for(let i=1;i<pts.length;i++) c.lineTo(pts[i][0], pts[i][1]);
+    c.closePath(); c.fill();
+  };
+  // Half-plane on the far side of the line through (px,py) with normal (nx,ny).
+  const halfPlane = (px,py,nx,ny)=>{
+    const L = Math.hypot(nx,ny) || 1; nx/=L; ny/=L;
+    const tx = -ny, ty = nx, B = extent;
+    poly([
+      [px+tx*B,      py+ty*B],
+      [px-tx*B,      py-ty*B],
+      [px-tx*B+nx*B, py-ty*B+ny*B],
+      [px+tx*B+nx*B, py+ty*B+ny*B],
+    ]);
+  };
+
+  inWorldSpace(c, ()=>{
+    if(q.kind==='radar'){
+      c.beginPath(); c.arc(g.cx, g.cy, g.r, 0, Math.PI*2); c.fill();
+    } else if(q.kind==='therm'){
+      if(g.bx===undefined) return;              // still tracking, no line yet
+      halfPlane((g.ax+g.bx)/2, (g.ay+g.by)/2, g.ax-g.bx, g.ay-g.by);
+    } else if(q.kind==='dir'){
+      if(g.axis==='ns') halfPlane(0, g.py, 0, 1);
+      else halfPlane(g.px, 0, 1, 0);
+    } else if(q.kind==='match'){
+      poly(nearestCellPolygon(PROJ[q.cat]||[], g.refIndex, extent));
+    } else if(q.kind==='vta'){
+      const names = new Set(g.qualifying||[]);
+      for(let i=0;i<PROJ.VTA.length;i++){
+        if(names.has(PROJ.VTA[i].n)) poly(nearestCellPolygon(PROJ.VTA, i, extent));
+      }
+    } else if(q.kind==='water'){
+      c.lineWidth = Math.max(g.refDist*2, 1);
+      c.lineCap = 'round'; c.lineJoin = 'round';
+      c.strokeStyle = c.fillStyle;
+      c.stroke(getWaterPath());
+    }
+  });
+}
+
+let maskCanvas = null, regionCanvas = null;
+function sizedScratch(which){
+  let c = which==='mask' ? maskCanvas : regionCanvas;
+  if(!c){ c = document.createElement('canvas'); if(which==='mask') maskCanvas=c; else regionCanvas=c; }
+  if(c.width !== canvas.width || c.height !== canvas.height){
+    c.width = canvas.width; c.height = canvas.height;
+  }
+  return c;
+}
+function getMaskCanvas(){ return sizedScratch('mask'); }
+
+/* Combine one question's region into the running mask.
+
+   A question's region can be made of several separate pieces — the VTA
+   power-up is the union of the areas around every qualifying station. Those
+   pieces have to be unioned together FIRST and only then intersected with the
+   mask. Compositing them one at a time with 'destination-in' would intersect
+   the pieces with each other instead, which collapses a union of eight station
+   areas down to nothing. So the pieces are drawn onto a scratch layer, then
+   that whole layer is applied to the mask in a single step. */
+function applyQuestionRegion(destCtx, q, mode){
+  const rc = sizedScratch('region');
+  const r = rc.getContext('2d');
+  r.setTransform(DPR,0,0,DPR,0,0);
+  r.globalCompositeOperation = 'source-over';
+  r.clearRect(0,0,W,H);
+  r.fillStyle = '#000';
+  paintTrueRegion(r, q);
+  destCtx.globalCompositeOperation = mode;
+  destCtx.setTransform(1,0,0,1,0,0);
+  destCtx.drawImage(rc, 0, 0);
+  destCtx.setTransform(DPR,0,0,DPR,0,0);
+  destCtx.globalCompositeOperation = 'source-over';
+}
+
+function drawElimCanvas(){
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  ctx.clearRect(0,0,W,H);
+  if(!PROJ.VTA) return;
+  const center = screenOf(0,0);
+  const radiusPx = milesToM(state.radiusMi) * state.view.scale;
+  const playCircle = c => { c.beginPath(); c.arc(center.x, center.y, radiusPx, 0, Math.PI*2); };
+
+  const active = state.questions.filter(q =>
+    (q.status==='answered_yes'||q.status==='answered_no') && (q.roundNumber||1)===state.roundNumber);
+
+  if(active.length){
+    /* Build the still-possible area: start with the whole play circle, then
+       intersect it with each answer's region (or subtract it, for a "no"). */
+    const mc = getMaskCanvas();
+    const m = mc.getContext('2d');
+    m.setTransform(DPR,0,0,DPR,0,0);
+    m.globalCompositeOperation = 'source-over';
+    m.clearRect(0,0,W,H);
+    m.fillStyle = '#000';
+    playCircle(m); m.fill();
+    for(const q of active){
+      applyQuestionRegion(m, q, q.status==='answered_yes' ? 'destination-in' : 'destination-out');
+    }
+    m.globalCompositeOperation = 'source-over';
+
+    // Hatch the play circle, then lift out whatever is still possible.
+    ctx.save();
+    playCircle(ctx); ctx.clip();
+    ctx.fillStyle = getHatch(ctx);
+    ctx.fillRect(0,0,W,H);
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.setTransform(1,0,0,1,0,0);
+    ctx.drawImage(mc, 0, 0);
+    ctx.setTransform(DPR,0,0,DPR,0,0);
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.restore();
+  }
+
+  // Orange preview of the question being considered.
+  if(state.draft){
+    const g = buildGeometry(state.draft.bank, state.draft.params);
+    ctx.save();
+    playCircle(ctx); ctx.clip();
+    ctx.fillStyle = 'rgba(196,130,60,0.45)';
+    paintTrueRegion(ctx, {kind:state.draft.kind, cat:state.draft.bank.cat, geometry:g});
+    ctx.restore();
+  }
+}
+
+/* Legend */
+const POI_COLORS = {MALLS:'#8a5cb0',PARKS:'#c99a2e',THEATRES:'#b0356e',HOSPITALS:'#2f8fa0',LIBRARIES:'#3d5a9c',WATER:'#3a6ea5'};
+const POI_LABELS = {MALLS:'Shopping mall',PARKS:'Public park',THEATRES:'Movie theatre',HOSPITALS:'Hospital',LIBRARIES:'Library',WATER:'Body of water'};
+function toggleRow(key, label, color, shape){
+  const on = state.layers[key];
+  const swStyle = on ? `background:${color};` : '';
+  const swShape = shape==='square' ? 'border-radius:2px;' : '';
+  return `<div class="row toggle ${on?'':'off'}" data-layer="${key}">
+    <span class="sw" style="${swStyle}${swShape}"></span>${label}<span class="state">${on?'ON':'OFF'}</span>
+  </div>`;
+}
+function renderLegend(){
+  const legend = document.getElementById('legend');
+  const poiRows = Object.keys(POI_COLORS).map(k=>toggleRow(k, POI_LABELS[k], POI_COLORS[k])).join('');
+  legend.innerHTML = `
+    <div class="row" id="legendToggle" style="cursor:pointer; font-weight:700;">Legend ${state.legendOpen?'▾':'▸'}</div>
+    <div id="legendBody" ${state.legendOpen?'':'hidden'}>
+      <div class="row"><span class="sw" style="background:var(--seeker)"></span>Seeker</div>
+      ${state.me.role==='hider'?'<div class="row"><span class="sw" style="background:var(--hider)"></span>You (hider)</div>':''}
+      ${toggleRow('VTA', 'VTA station', 'var(--ink-soft)', 'square')}
+      ${poiRows}
+      <div class="note">Dashed line = play boundary. Tap a layer above to show or hide it.</div>
+    </div>
+  `;
+  document.getElementById('legendToggle').onclick=()=>{state.legendOpen=!state.legendOpen; renderLegend();};
+  document.querySelectorAll('#legend [data-layer]').forEach(row=>{
+    row.onclick=()=>{setLayerVisible(row.dataset.layer, !state.layers[row.dataset.layer]); renderLegend();};
+  });
+}
+
+/* ============================== PAN / ZOOM ============================== */
+let pointers = new Map();
+let pinchStartDist=0, pinchStartScale=1;
+let dragStart=null;
+svg.addEventListener('pointerdown', e=>{
+  svg.setPointerCapture(e.pointerId);
+  state.isInteracting = true;
+  pointers.set(e.pointerId, {x:e.clientX,y:e.clientY});
+  if(pointers.size===1){ dragStart = {x:e.clientX,y:e.clientY, panX:state.view.panX, panY:state.view.panY, moved:false}; }
+  if(pointers.size===2){
+    const pts=[...pointers.values()];
+    pinchStartDist = Math.hypot(pts[0].x-pts[1].x, pts[0].y-pts[1].y);
+    pinchStartScale = state.view.scale;
+  }
+});
+svg.addEventListener('pointermove', e=>{
+  if(!pointers.has(e.pointerId)) return;
+  pointers.set(e.pointerId, {x:e.clientX,y:e.clientY});
+  if(pointers.size===1 && dragStart){
+    state.view.panX = dragStart.panX + (e.clientX-dragStart.x);
+    state.view.panY = dragStart.panY + (e.clientY-dragStart.y);
+    if(Math.hypot(e.clientX-dragStart.x, e.clientY-dragStart.y)>4) dragStart.moved=true;
+    scheduleView();
+  } else if(pointers.size===2){
+    const pts=[...pointers.values()];
+    const dist = Math.hypot(pts[0].x-pts[1].x, pts[0].y-pts[1].y);
+    state.view.scale = clampScale(pinchStartScale * (dist/pinchStartDist));
+    scheduleView();
+  }
+});
+function endPointer(e){
+  const wasTap = dragStart && !dragStart.moved && pointers.size===1;
+  pointers.delete(e.pointerId);
+  if(wasTap && pointers.size===0){
+    handleMapTap(e.clientX, e.clientY);
+  }
+  if(pointers.size<1){
+    dragStart=null;
+    state.isInteracting = false;
+    renderAll(); // settle: resize the static markers and re-run the declutter
+  }
+}
+svg.addEventListener('pointerup', endPointer);
+svg.addEventListener('pointercancel', endPointer);
+let wheelSettleTimer = null;
+svg.addEventListener('wheel', e=>{
+  e.preventDefault();
+  const factor = Math.exp(-e.deltaY*0.001);
+  state.view.scale = clampScale(state.view.scale*factor);
+  state.isInteracting = true;
+  scheduleView();
+  clearTimeout(wheelSettleTimer);
+  wheelSettleTimer = setTimeout(()=>{ state.isInteracting = false; renderAll(); }, 140);
+}, {passive:false});
+function clampScale(s){
+  const base = state.baseScale || initialScale();
+  return Math.max(base*0.25, Math.min(base*40, s));
+}
+function handleMapTap(cx,cy){
+  const rect = document.getElementById('mapWrap').getBoundingClientRect();
+  const sx = cx-rect.left, sy = cy-rect.top;
+  const w = worldOfScreen(sx,sy);
+  const latlon = fromWorld(w.x,w.y);
+  if(state.draft && state.draft.kind==='radar'){
+    state.draft.params.refLat = latlon.lat; state.draft.params.refLon = latlon.lon;
+    recomputeDraftPreview();
+    renderQuestionsOverlay();
+  } else if(state.locMode==='manual'){
+    state.myLatLon = latlon;
+    onMyLocationUpdate();
+    renderAll();
+  }
+}
+function fromWorld(wx,wy){
+  const latRad = ORIGIN.lat*Math.PI/180;
+  const lon = ORIGIN.lon + (wx/(R_EARTH*Math.cos(latRad)))*180/Math.PI;
+  const lat = ORIGIN.lat + (wy/R_EARTH)*180/Math.PI;
+  return {lat,lon};
+}
+
+document.getElementById('zoomIn').onclick=()=>{state.view.scale=clampScale(state.view.scale*1.35); renderAll();};
+document.getElementById('zoomOut').onclick=()=>{state.view.scale=clampScale(state.view.scale/1.35); renderAll();};
+document.getElementById('recenterBtn').onclick=resetView;
+document.getElementById('myLocBtn').onclick=centerOnMe;
+document.getElementById('locModeChip').onclick=()=>setLocMode(state.locMode==='manual'?'gps':'manual');
+
+/* ============================== PANEL / TABS ============================== */
+document.getElementById('panelHandle').onclick=()=>{
+  state.panelCollapsed = !state.panelCollapsed;
+  document.getElementById('panel').classList.toggle('collapsed', state.panelCollapsed);
+};
+/* Each tab shares one scrolling area. Without resetting it, switching from a
+   long tab (Questions) to a short one left the new tab scrolled partway down,
+   hiding the controls at the top of it — the End game button in particular. */
+function openTab(name){
+  state.activeTab = name;
+  document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active', x.dataset.tab===name));
+  state.panelCollapsed=false; document.getElementById('panel').classList.remove('collapsed');
+  renderPanel();
+  document.getElementById('panelBody').scrollTop = 0;
+}
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>openTab(t.dataset.tab));
+document.getElementById('menuBtn').onclick=()=>openTab('setup');
+
+function updateRoleBadge(){
+  const b = document.getElementById('roleBadge');
+  if(!state.me.role){b.hidden=true; return;}
+  b.hidden=false;
+  b.textContent = state.me.role==='hider' ? '🦊 Hider' : '🔎 Seeker';
+  b.className = 'pill '+(state.me.role==='hider'?'role-hider':'role-seeker');
+  const rb = document.getElementById('roundBadge');
+  rb.hidden=false; rb.textContent='Round '+state.roundNumber;
+}
+
+function renderPanel(){
+  const body = document.getElementById('panelBody');
+  if(state.activeTab==='players') return renderPlayersTab(body);
+  if(state.activeTab==='log') return renderLogTab(body);
+  if(state.activeTab==='setup') return renderSetupTab(body);
+  return renderQuestionsTab(body);
+}
+
+function renderPlayersTab(body){
+  const rows = Object.entries(state.players).map(([id,p])=>{
+    const color = p.role==='hider'?'var(--hider)':(p.role==='seeker'?'var(--seeker)':'var(--ink-faint)');
+    return `<div class="player-row"><span class="dot" style="background:${color}"></span>
+      <span class="name">${escapeHtml(p.name||'?')}${p.isHost?' 👑':''}${id===state.me.id?' (you)':''}</span>
+      <span class="spacer"></span><span class="sub">${p.role||'no role'}</span></div>`;
+  }).join('') || '<p class="hint">No players yet.</p>';
+  body.innerHTML = `<div class="section-title">In this room</div>${rows}`;
+}
+
+function renderLogTab(body){
+  if(!state.questions.length){ body.innerHTML = '<p class="hint">No questions asked yet this round.</p>'; return; }
+  const canUndo = state.me.role==='seeker';
+  const rows = [...state.questions].reverse().map(q=>{
+    let ans;
+    const isResolved = q.status==='answered_yes' || q.status==='answered_no';
+    if(q.status==='pending') ans = '<span class="lanswer wait">Waiting for hider\'s answer…</span>';
+    else if(q.status==='tracking') ans = '<span class="lanswer wait">Tracking movement…</span>';
+    else if(q.status==='vetoed') ans = '<span class="lanswer veto">Vetoed — can ask again</span>';
+    else ans = `<span class="lanswer ${q.status==='answered_yes'?'yes':'no'}">${answerLabel(q)}</span>`;
+    const undoBtn = (isResolved && canUndo) ? `<button class="btn small" style="margin-top:6px;" data-act="undo" data-id="${q.id}">Undo — recorded by mistake</button>` : '';
+    return `<div class="logentry"><div class="lqtitle">${escapeHtml(q.label)}</div>
+      <div class="lmeta">Round ${q.roundNumber||1} · asked by ${escapeHtml(q.askedBy||'?')}</div>
+      ${ans}${undoBtn}</div>`;
+  }).join('');
+  body.innerHTML = `<div class="section-title">Question log</div>${rows}`;
+  document.querySelectorAll('#panelBody [data-act="undo"]').forEach(b=>b.onclick=()=>{
+    const q = state.questions.find(x=>x.id===b.dataset.id);
+    if(q) undoAnswer(q);
+  });
+}
+function answerLabel(q){
+  if(q.kind==='therm') return q.status==='answered_yes' ? 'Closer to start point' : 'Closer to end point';
+  if(q.kind==='dir') return q.status==='answered_yes' ? (q.geometry.axis==='ns'?'North':'East') : (q.geometry.axis==='ns'?'South':'West');
+  if(q.kind==='water') return q.status==='answered_yes' ? 'Hider is closer to water' : 'Hider is farther from water';
+  return q.status==='answered_yes' ? 'Yes' : 'No';
+}
+
+function renderSetupTab(body){
+  const canEdit = state.me.isHost && !state.started;
+  body.innerHTML = `
+    <div class="section-title">Play area</div>
+    <div class="field"><label>Center latitude, longitude</label>
+      <div style="display:flex; gap:6px;">
+        <input class="numfield" style="width:auto;flex:1" id="setLat" value="${state.center.lat}" ${canEdit?'':'disabled'}>
+        <input class="numfield" style="width:auto;flex:1" id="setLon" value="${state.center.lon}" ${canEdit?'':'disabled'}>
+      </div>
+    </div>
+    <div class="field"><label>Radius (miles)</label>
+      <input class="numfield" style="width:auto" id="setRadius" value="${state.radiusMi}" ${canEdit?'':'disabled'}>
+    </div>
+    ${canEdit?'<button class="btn primary" id="applySetup">Apply</button>':'<p class="hint">Only the host can edit this, and only before the game starts.</p>'}
+    <div class="section-title">Round</div>
+    <p class="hint">Round ${state.roundNumber}. Starting a new round clears the shaded map and resets one-per-round powerups (the hider re-hides).</p>
+    <button class="btn" id="newRoundBtn">Start new round</button>
+    <div class="section-title">Game</div>
+    ${state.me.isHost ? `
+      <p class="hint">Ending the game sends everyone back to the lobby to pick roles again (hider and seekers can swap), and clears the question log and shaded map for a fresh start.</p>
+      <button class="btn" id="endGameBtn" style="border-color:var(--bad); color:var(--bad);">End game &amp; start new game</button>
+    ` : '<p class="hint">Only the host can end the game.</p>'}
+    <div class="section-title">About location</div>
+    <p class="hint">Toggle GPS vs. manual pin from the map's bottom-left chip. Seekers' positions are shared with everyone; the hider's own position is never shared — only the hider sees it, on their own screen.</p>
+    <div class="section-title">This device</div>
+    <p class="hint">Closing this tab, switching apps, or reloading won't lose your spot — reopening this same link brings you right back into this room, with your name, role, and host status intact.</p>
+    <button class="btn small" id="leaveRoomBtn">Leave room</button>
+  `;
+  const apply = document.getElementById('applySetup');
+  if(apply) apply.onclick = ()=>applyRoomSettings(
+    parseFloat(document.getElementById('setLat').value),
+    parseFloat(document.getElementById('setLon').value),
+    parseFloat(document.getElementById('setRadius').value)
+  );
+  document.getElementById('newRoundBtn').onclick = newRound;
+  document.getElementById('leaveRoomBtn').onclick = leaveRoom;
+  const endBtn = document.getElementById('endGameBtn');
+  if(endBtn) endBtn.onclick = endGame;
+}
+
+function renderQuestionsTab(body){
+  if(state.me.role==='hider'){
+    body.innerHTML = '<p class="hint" style="margin-top:14px;">Only seekers ask questions here. You can see the log, the shaded map, and every seeker\'s live position.</p>';
+    return;
+  }
+  const groups = ['Matching','Radar','Thermometer','Powerups'];
+  let html = `<p class="hint">Tap a question to preview how it would split the map right now — nothing is shared yet. Tap <b>Ask</b> to commit it: the hider then answers you out loud, and you record their answer below.</p>`;
+  for(const grp of groups){
+    html += `<div class="section-title">${grp}</div>`;
+    for(const bank of QUESTION_BANK.filter(b=>b.group===grp)){
+      const status = bankStatus(bank.key);
+      const isPreviewing = state.draft && state.draft.bankKey===bank.key;
+      html += renderQCard(bank, status, isPreviewing);
+    }
+  }
+  body.innerHTML = html;
+  wireQuestionCardEvents();
+}
+
+function renderQCard(bank, status, isPreviewing){
+  let badge='', controls='';
+  if(status.state==='used') badge = `<span class="badge ${status.q.status==='answered_yes'?'used-yes':'used-no'}">${status.q.status==='answered_yes'?'Answered':'Answered'}</span>`;
+  else if(status.state==='pending') badge = `<span class="badge pending">${status.q.status==='tracking'?'Tracking…':'Awaiting answer'}</span>`;
+  else badge = `<span class="badge available">Available</span>`;
+
+  let extra = '';
+  if(bank.key==='radar_custom' && isPreviewing){
+    extra = `<div class="qrow"><label style="font-size:11px;color:var(--ink-faint)">Radius (m)</label><input type="number" class="numfield" id="customRadiusInput" value="${state.draftCustomRadiusM||1000}" min="10"></div>`;
+  }
+  if(bank.key==='powerup_dir' && isPreviewing){
+    extra = `<div class="qrow">
+      <select class="selfield" id="dirAxisSelect"><option value="ns" ${((state.draftAxis||'ns')==='ns')?'selected':''}>North / South</option><option value="ew" ${(state.draftAxis==='ew')?'selected':''}>East / West</option></select>
+    </div>`;
+  }
+  if(bank.key==='powerup_vta' && isPreviewing){
+    const opts = GEO_VTA.map(s=>`<option value="${s.n}" ${((state.draftVtaStation||bank.defaultStation)===s.n)?'selected':''}>${s.n}</option>`).join('');
+    extra = `<div class="qrow">
+      <select class="selfield" id="vtaStationSelect">${opts}</select>
+      <label style="font-size:11px;color:var(--ink-faint)">stops</label>
+      <input type="number" class="numfield" id="vtaStopsInput" value="${state.draftVtaStops||bank.defaultStops}" min="1" max="20">
+    </div>`;
+  }
+
+  let controlsRow = '';
+  if(status.state==='available'){
+    if(isPreviewing){
+      controlsRow = `<div class="qrow">
+        <button class="btn primary small" data-act="ask" data-key="${bank.key}">Ask</button>
+        <button class="btn small" data-act="cancel">Cancel preview</button>
+      </div>`;
+    } else {
+      controlsRow = `<div class="qrow"><button class="btn small" data-act="preview" data-key="${bank.key}">Preview</button></div>`;
+    }
+  } else if(status.state==='pending' && status.q.status==='pending'){
+    controlsRow = `<div class="qrow">
+      ${answerButtonsFor(bank, status.q)}
+      <button class="btn veto small" data-act="answer" data-id="${status.q.id}" data-answer="vetoed">Veto</button>
+    </div>`;
+  } else if(status.state==='used'){
+    controlsRow = `<div class="qrow">
+      <button class="btn small" data-act="undo" data-id="${status.q.id}">Undo — recorded by mistake</button>
+    </div>`;
+  }
+  let liveReadout = '';
+  if(isPreviewing){
+    liveReadout = `<div class="qdesc" style="color:var(--accent); font-weight:600; margin-top:6px;">${previewReadout(bank)}</div>`;
+  }
+  return `<div class="qcard ${status.state==='used'?'used':''} ${isPreviewing?'previewing':''}">
+    <div class="qtitle">${escapeHtml(bank.label)} ${badge}</div>
+    <div class="qdesc">${questionDesc(bank, status)}</div>
+    ${extra}${liveReadout}${controlsRow}
+  </div>`;
+}
+function previewReadout(bank){
+  if(!state.draft) return '';
+  const g = buildGeometry(state.draft.bank, state.draft.params);
+  if(bank.kind==='match') return `Right now, your nearest ${POI_LABELS[bank.cat].toLowerCase()} is: ${escapeHtml(g.refName)}. The shaded patch on the map is everywhere else that shares that same nearest ${POI_LABELS[bank.cat].toLowerCase()} — it can be tiny if they're packed close together.`;
+  if(bank.kind==='water') return `Your nearest body of water is ${fmtDist(g.refDist)} away (${escapeHtml(g.refName)}). Shaded = closer to water than that.`;
+  if(bank.kind==='radar') return `Circle: ${fmtDist(g.r)} radius, centered where marked.`;
+  if(bank.kind==='vta') return `Stations within ${g.stops} stop${g.stops===1?'':'s'} of ${escapeHtml(g.station)}: ${g.qualifying.length} station${g.qualifying.length===1?'':'s'} qualify.`;
+  if(bank.kind==='dir') return `Line drawn through your current pin, splitting ${g.axis==='ns'?'north from south':'east from west'}.`;
+  if(bank.kind==='therm') return `Starting point set at your current pin. Walk ${fmtDist(g.distM)} away once you Ask, and the dividing line locks in automatically.`;
+  return '';
+}
+function answerButtonsFor(bank, q){
+  if(bank.kind==='therm') return `<button class="btn yes small" data-act="answer" data-id="${q.id}" data-answer="answered_yes">Closer to A</button><button class="btn no small" data-act="answer" data-id="${q.id}" data-answer="answered_no">Closer to B</button>`;
+  if(bank.kind==='dir') return `<button class="btn yes small" data-act="answer" data-id="${q.id}" data-answer="answered_yes">${q.geometry.axis==='ns'?'North':'East'}</button><button class="btn no small" data-act="answer" data-id="${q.id}" data-answer="answered_no">${q.geometry.axis==='ns'?'South':'West'}</button>`;
+  if(bank.kind==='water') return `<button class="btn yes small" data-act="answer" data-id="${q.id}" data-answer="answered_yes">Hider closer</button><button class="btn no small" data-act="answer" data-id="${q.id}" data-answer="answered_no">Hider farther</button>`;
+  return `<button class="btn yes small" data-act="answer" data-id="${q.id}" data-answer="answered_yes">Yes</button><button class="btn no small" data-act="answer" data-id="${q.id}" data-answer="answered_no">No</button>`;
+}
+function questionDesc(bank, status){
+  if(bank.kind==='radar') return status.q? `Center + ${fmtDist(status.q.geometry.r)} radius.` : 'Place the center anywhere on the map, then ask if the hider is inside that radius.';
+  if(bank.kind==='match') return status.q? `Compared against your nearest at ask-time: ${escapeHtml(status.q.geometry.refName)}.` : 'Uses your current pin as the reference point.';
+  if(bank.kind==='water') return 'Compares the hider\'s distance to the nearest lake, creek, river, or bay against yours.';
+  if(bank.kind==='therm') return status.q? (status.q.status==='tracking' ? 'Walk '+fmtDist(status.q.geometry.distM)+' from here — the line locks in once you do.' : 'Line locked in. Hider says which end they\'re closer to.') : 'Marks your spot now; once you move the set distance, a dividing line locks in.';
+  if(bank.kind==='dir') return 'Once per round. Draws a line through your current pin; hider says which side.';
+  if(bank.kind==='vta') return status.q? `Within ${status.q.geometry.stops} stops of ${status.q.geometry.station}.` : 'Choose a station and a stop count — asks if the hider\'s nearest station is within that many stops.';
+  return '';
+}
+
+function wireQuestionCardEvents(){
+  document.querySelectorAll('[data-act="preview"]').forEach(b=>b.onclick=()=>{
+    const bank = QUESTION_BANK.find(x=>x.key===b.dataset.key);
+    startDraft(bank);
+    renderPanel();
+  });
+  document.querySelectorAll('[data-act="cancel"]').forEach(b=>b.onclick=()=>{cancelDraft(); renderPanel();});
+  document.querySelectorAll('[data-act="ask"]').forEach(b=>b.onclick=()=>{askDraft(); renderPanel();});
+  document.querySelectorAll('[data-act="answer"]').forEach(b=>b.onclick=()=>{
+    const q = state.questions.find(x=>x.id===b.dataset.id);
+    if(q) answerQuestion(q, b.dataset.answer);
+  });
+  document.querySelectorAll('[data-act="undo"]').forEach(b=>b.onclick=()=>{
+    const q = state.questions.find(x=>x.id===b.dataset.id);
+    if(q) undoAnswer(q);
+  });
+  const cr = document.getElementById('customRadiusInput');
+  if(cr) cr.oninput=()=>{state.draftCustomRadiusM=parseFloat(cr.value)||1000; if(state.draft){state.draft.params.radiusM=state.draftCustomRadiusM; recomputeDraftPreview();} renderQuestionsOverlay();};
+  const ax = document.getElementById('dirAxisSelect');
+  if(ax) ax.onchange=()=>{state.draftAxis=ax.value; if(state.draft){state.draft.params.axis=ax.value; recomputeDraftPreview();} renderQuestionsOverlay();};
+  const vs = document.getElementById('vtaStationSelect');
+  if(vs) vs.onchange=()=>{state.draftVtaStation=vs.value; if(state.draft){state.draft.params.station=vs.value; recomputeDraftPreview();}};
+  const vn = document.getElementById('vtaStopsInput');
+  if(vn) vn.oninput=()=>{state.draftVtaStops=parseInt(vn.value)||5; if(state.draft){state.draft.params.stops=state.draftVtaStops; recomputeDraftPreview();}};
+}
+
+function escapeHtml(s){return (s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
+/* ============================== PHASES / SCREENS ============================== */
+function goPhase(p){
+  state.phase = p;
+  document.getElementById('reconnectOverlay').hidden = true;
+  document.getElementById('joinOverlay').hidden = p!=='join';
+  document.getElementById('lobbyOverlay').hidden = p!=='lobby';
+  if(p==='lobby') renderLobby();
+  if(p==='playing'){
+    document.getElementById('lobbyOverlay').hidden = true;
+    resizeCanvas();
+    resetView();
+    renderLegend();
+    updateRoleBadge();
+    renderPanel();
+    if(!state.gpsAttempted){
+      state.gpsAttempted = true;
+      setLocMode('gps', {silentFallback:true});
+    }
+  }
+}
+function onRoomUpdate(){
+  if(state.started && state.phase!=='playing'){ goPhase('playing'); }
+  else if(!state.started && state.phase==='playing'){ goPhase('lobby'); }
+  else if(state.phase==='playing'){ resizeCanvas(); }
+  updateRoleBadge();
+}
+function renderLobby(){
+  document.getElementById('pickHider').classList.toggle('sel', state.me.role==='hider');
+  document.getElementById('pickHider').classList.toggle('hider', state.me.role==='hider');
+  document.getElementById('pickSeeker').classList.toggle('sel', state.me.role==='seeker');
+  document.getElementById('pickSeeker').classList.toggle('seeker', state.me.role==='seeker');
+  renderLobbyPlayers();
+  const startBtn = document.getElementById('startGameBtn');
+  const waitHint = document.getElementById('lobbyWaitHint');
+  startBtn.hidden = !state.me.isHost;
+  waitHint.hidden = state.me.isHost;
+  const hostSettings = document.getElementById('hostSettings');
+  hostSettings.hidden = !state.me.isHost;
+  if(state.me.isHost){
+    document.getElementById('lobbySetLat').value = state.center.lat;
+    document.getElementById('lobbySetLon').value = state.center.lon;
+    document.getElementById('lobbySetRadius').value = state.radiusMi;
+  }
+}
+async function applyRoomSettings(lat, lon, radiusMi){
+  if(isNaN(lat)||isNaN(lon)||isNaN(radiusMi)) return;
+  const db = await getDb();
+  if(db) await roomDoc(db).update({centerLat:lat, centerLon:lon, radiusMi});
+  else { state.center={lat,lon}; state.radiusMi=radiusMi; rebuildGeography(); resetView(); }
+}
+document.getElementById('lobbyApplySetup').onclick=()=>{
+  applyRoomSettings(
+    parseFloat(document.getElementById('lobbySetLat').value),
+    parseFloat(document.getElementById('lobbySetLon').value),
+    parseFloat(document.getElementById('lobbySetRadius').value)
+  );
+};
+function renderLobbyPlayers(){
+  const el2 = document.getElementById('lobbyPlayers');
+  if(!el2) return;
+  el2.innerHTML = Object.entries(state.players).map(([id,p])=>{
+    const color = p.role==='hider'?'var(--hider)':(p.role==='seeker'?'var(--seeker)':'var(--ink-faint)');
+    return `<div class="player-row"><span class="dot" style="background:${color}"></span><span class="name">${escapeHtml(p.name||'?')}${p.isHost?' 👑':''}</span><span class="spacer"></span><span class="sub">${p.role||'choosing…'}</span></div>`;
+  }).join('') || '<p class="hint">Just you so far.</p>';
+}
+
+document.getElementById('pickHider').onclick=()=>setRole('hider');
+document.getElementById('pickSeeker').onclick=()=>setRole('seeker');
+document.getElementById('startGameBtn').onclick=startGame;
+
+document.getElementById('createBtn').onclick=()=>{
+  const name = document.getElementById('nameInput').value.trim() || 'Player';
+  state.me.name = name; localSet('jld_name', name);
+  const code = genRoomCode();
+  document.getElementById('roomInput').value = code;
+  localSet('jld_room', code);
+  enterRoom(code, true);
+};
+document.getElementById('joinBtn').onclick=()=>{
+  const name = document.getElementById('nameInput').value.trim();
+  const code = document.getElementById('roomInput').value.trim().toUpperCase();
+  if(!name || !code) return alert('Enter your name and a room code.');
+  state.me.name = name; localSet('jld_name', name);
+  localSet('jld_room', code);
+  enterRoom(code, false);
+};
+function leaveRoom(){
+  if(!confirm('Leave this room? You\'ll need the room code again to rejoin, and you\'ll stop appearing in the player list.')) return;
+  try{ localStorage.removeItem('jld_room'); }catch(e){}
+  clearSubs();
+  if(state.watchId!==null && navigator.geolocation){ navigator.geolocation.clearWatch(state.watchId); state.watchId=null; }
+  location.reload();
+}
+
+/* ============================== INIT ============================== */
+function rebuildGeography(){
+  ORIGIN = {...state.center};
+  reprojectAll();
+  waterPathCache = null; // world coordinates just moved under it
+  buildGrid();
+  buildBasemap();
+  drawRadiusCircle();
+  buildStaticMarkers();
+}
+function initMap(){
+  buildVtaGraph();
+  rebuildGeography();
+  resizeCanvas();
+  resetView();
+}
+document.getElementById('nameInput').value = state.me.name;
+initMap();
+
+const savedRoom = localGet('jld_room', null);
+if(savedRoom && state.me.name){
+  document.getElementById('reconnectCode').textContent = savedRoom;
+  document.getElementById('reconnectOverlay').hidden = false;
+  document.getElementById('reconnectLeaveBtn').onclick = leaveRoom;
+  document.getElementById('roomInput').value = savedRoom;
+  enterRoom(savedRoom, false);
+} else {
+  goPhase('join');
+}
+</script>
